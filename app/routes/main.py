@@ -26,7 +26,7 @@ def index():
         .join(Vehicle, FillUp.vehicle_id == Vehicle.id)
         .filter(Vehicle.user_id == uid)
         .order_by(FillUp.date.desc(), FillUp.id.desc())
-        .limit(10)
+        .limit(5)
         .all()
     )
 

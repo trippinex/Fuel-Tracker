@@ -9,6 +9,12 @@ All notable changes to FuelTrack are documented here.
 
 ---
 
+## [1.1.1] — 2026-05-25
+
+- Dashboard recent fill-ups limited to 5 entries (was 10)
+
+---
+
 ## [1.1.0] — 2026-05-25
 
 - Added semantic versioning (`app/version.py`) as single source of truth
