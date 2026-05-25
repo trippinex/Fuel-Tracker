@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-5 sm:space-y-6">
+
+  <!-- Header -->
+  <div>
+    <h1 class="text-xl sm:text-2xl font-bold text-slate-800">
+      <span id="greeting-word">Hello</span>, {{ first_name }}!
+    </h1>
+    {% if insight %}
+    <span class="inline-flex items-center gap-1.5 mt-1.5 bg-green-50 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-green-100">
+      <svg class="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+      </svg>
+      {{ insight }}
+    </span>
+    {% else %}
+    <p class="text-sm text-slate-500 mt-0.5">Your fuel tracking overview</p>
+    {% endif %}
+  </div>
+
+  <!-- Summary cards — 2-up on mobile, 5-up on sm+ -->
+  <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
+    <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col gap-1">
+      <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Vehicles</span>
+      <span class="text-2xl font-bold text-slate-800">{{ total_vehicles }}</span>
+      <span class="text-xs text-slate-400">tracked</span>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col gap-1">
+      <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Fill-Ups</span>
+      <span class="text-2xl font-bold text-slate-800">{{ total_fillups }}</span>
+      <span class="text-xs text-slate-400">recorded</span>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col gap-1">
+      <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Spend</span>
+      <span class="text-xl sm:text-2xl font-bold text-slate-800">${{ "%.2f"|format(total_spend) }}</span>
+      <span class="text-xs text-slate-400">all time</span>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col gap-1">
+      <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Gallons</span>
+      <span class="text-2xl font-bold text-slate-800">{{ "%.1f"|format(total_gallons) }}</span>
+      <span class="text-xs text-slate-400">pumped</span>
+    </div>
+    <div class="col-span-2 sm:col-span-1 bg-white rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col gap-1">
+      <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Fleet MPG</span>
+      <span class="text-2xl font-bold {% if fleet_avg_mpg %}text-green-600{% else %}text-slate-800{% endif %}">
+        {{ "%.1f"|format(fleet_avg_mpg) if fleet_avg_mpg else "—" }}
+      </span>
+      <span class="text-xs text-slate-400">avg efficiency</span>
+    </div>
+  </div>
+
+  {% if not vehicles %}
+  <!-- Empty state -->
+  <div class="bg-white rounded-xl border border-slate-200 text-center py-12 space-y-4">
+    <svg class="w-14 h-14 text-slate-300 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M5 3v18M5 3h10a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H5M19 7l1 1v9a2 2 0 0 1-2 2h-1"/>
+    </svg>
+    <div>
+      <p class="text-slate-600 font-medium">No vehicles yet</p>
+      <p class="text-sm text-slate-400 mt-1">Add your first vehicle to start tracking fuel.</p>
+    </div>
+    <a href="{{ url_for('vehicles.add_vehicle') }}"
+       class="inline-flex items-center justify-center gap-2 bg-fuel-500 hover:bg-fuel-600 active:bg-fuel-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors text-sm mx-auto">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+      </svg>
+      Add First Vehicle
+    </a>
+  </div>
+
+  {% else %}
+
+  <!-- Vehicle quick-links -->
+  <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 space-y-3">
+    <div class="flex items-center justify-between">
+      <h2 class="font-semibold text-slate-700">Your Vehicles <span class="text-slate-400 font-normal">({{ total_vehicles }})</span></h2>
+      <div class="flex gap-2">
+        <button type="button" onclick="location.href='{{ url_for('vehicles.list_vehicles') }}'"
+                class="inline-flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-1.5 px-3 rounded-lg transition-colors text-xs">
+          Manage
+        </button>
+        <button type="button" onclick="location.href='{{ url_for('vehicles.add_vehicle') }}'"
+                class="inline-flex items-center justify-center bg-fuel-500 hover:bg-fuel-600 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors text-xs">
+          Add
+        </button>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+      {% for vehicle in vehicles %}
+      <div class="{% if most_recent_vehicle_id and vehicle.id != most_recent_vehicle_id %}hidden sm:block{% endif %} bg-white rounded-xl border border-slate-200 p-4 sm:p-5">
+        <!-- Thumbnail + text -->
+        <div class="flex gap-3 items-start">
+          {% if vehicle.photo_filename %}
+          <img src="{{ url_for('vehicles.vehicle_photo', filename=vehicle.photo_filename) }}"
+               alt="{{ vehicle.name }}"
+               style="width:100px;height:75px;object-fit:cover;border-radius:6px;"
+               class="shrink-0" />
+          {% else %}
+          <div style="width:100px;height:75px;border-radius:6px;"
+               class="shrink-0 bg-slate-100 flex items-center justify-center">
+            <svg class="w-7 h-7 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </div>
+          {% endif %}
+          <div class="min-w-0 flex-1">
+            <p class="font-medium text-sm text-slate-800 truncate">{{ vehicle.name }}</p>
+            <p class="text-xs text-slate-400 mt-0.5">{{ vehicle.year }} · {{ vehicle.fuel_capacity_gallons }} gal · {{ "{:,}".format(vehicle.fill_ups[-1].odometer_reading) if vehicle.fill_ups else "—" }} mi</p>
+            {% if vehicle.license_plate or vehicle.vin %}
+            <p class="text-xs text-slate-400 mt-0.5 truncate">
+              {% if vehicle.license_plate %}{{ vehicle.license_plate }}{% endif %}
+              {% if vehicle.license_plate and vehicle.vin %} · {% endif %}
+              {% if vehicle.vin %}{{ vehicle.vin }}{% endif %}
+            </p>
+            {% endif %}
+          </div>
+        </div>
+        <!-- Tap-friendly action row -->
+        <div class="flex gap-2 mt-3 pt-2.5 border-t border-slate-100">
+          <a href="{{ url_for('fillups.add_fillup', vehicle_id=vehicle.id) }}"
+             class="flex-1 flex items-center justify-center gap-1 bg-fuel-500 hover:bg-fuel-600 text-white text-xs font-semibold py-2 px-2 rounded-md transition-colors min-h-[36px]">
+            Fill-Up
+          </a>
+          <a href="{{ url_for('analytics.analytics', vehicle_id=vehicle.id) }}"
+             class="flex-1 flex items-center justify-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2 px-2 rounded-md transition-colors min-h-[36px]">
+            Analytics
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Recent fill-ups -->
+  <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 space-y-3">
+    <div class="flex items-center justify-between">
+      <h2 class="font-semibold text-slate-700">Recent Fill-Ups</h2>
+      <a href="{{ url_for('fillups.history') }}"
+         class="text-xs font-semibold text-fuel-600 hover:text-fuel-700 transition-colors">
+        View All →
+      </a>
+    </div>
+
+    {% if recent_fillups %}
+
+    <!-- Mobile card list (hidden on sm+) -->
+    <div class="sm:hidden space-y-2">
+      {% for fillup, vehicle, mpg in recent_fillups %}
+      <div class="bg-slate-50 rounded-lg px-3 py-3 border border-slate-100">
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-medium text-slate-800 truncate">{{ vehicle.name }}</p>
+          <span class="text-sm font-semibold text-slate-800 shrink-0 ml-2">
+            {% if fillup.price_per_gallon > 0 %}${{ "%.2f"|format(fillup.total_cost) }}{% else %}—{% endif %}
+          </span>
+        </div>
+        <p class="text-xs text-slate-500 mt-0.5">
+          {{ fillup.date.strftime('%b %d, %Y') }}
+          &nbsp;·&nbsp; {{ "%.3f"|format(fillup.gallons_pumped) }} gal
+          {% if mpg %}&nbsp;·&nbsp; <span class="text-green-600 font-medium">{{ "%.1f"|format(mpg) }} MPG</span>{% endif %}
+        </p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Desktop table (hidden below sm) -->
+    <div class="hidden sm:block overflow-x-auto -mx-5 px-5">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-400">
+            <th class="text-left pb-2 font-semibold">Vehicle</th>
+            <th class="text-left pb-2 font-semibold">Date</th>
+            <th class="text-right pb-2 font-semibold">Odometer</th>
+            <th class="text-right pb-2 font-semibold">Gallons</th>
+            <th class="text-right pb-2 font-semibold">$/Gal</th>
+            <th class="text-right pb-2 font-semibold">MPG</th>
+            <th class="text-right pb-2 font-semibold">Total</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for fillup, vehicle, mpg in recent_fillups %}
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="py-2.5 font-medium text-slate-700">{{ vehicle.name }}</td>
+            <td class="py-2.5 text-slate-500">{{ fillup.date.strftime('%b %d, %Y') }}</td>
+            <td class="py-2.5 text-right text-slate-600">{{ "{:,}".format(fillup.odometer_reading) }}</td>
+            <td class="py-2.5 text-right text-slate-600">{{ "%.3f"|format(fillup.gallons_pumped) }}</td>
+            <td class="py-2.5 text-right text-slate-600">
+              {% if fillup.price_per_gallon > 0 %}${{ "%.3f"|format(fillup.price_per_gallon) }}{% else %}—{% endif %}
+            </td>
+            <td class="py-2.5 text-right font-medium {% if mpg %}text-green-600{% else %}text-slate-400{% endif %}">
+              {% if mpg %}{{ "%.1f"|format(mpg) }}{% else %}—{% endif %}
+            </td>
+            <td class="py-2.5 text-right font-semibold text-slate-800">
+              {% if fillup.price_per_gallon > 0 %}${{ "%.2f"|format(fillup.total_cost) }}{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% else %}
+    <p class="text-sm text-slate-400 text-center py-6">No fill-ups recorded yet.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Floating action button — log a fill-up -->
+<a href="{{ url_for('fillups.add_fillup') }}"
+   class="fixed bottom-6 right-6 z-50 inline-flex items-center justify-center w-14 h-14 bg-fuel-500 hover:bg-fuel-600 active:bg-fuel-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all"
+   title="Log a fill-up">
+  <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+  </svg>
+</a>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var h = new Date().getHours();
+  var word = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('greeting-word').textContent = word;
+})();
+</script>
+{% endblock %}

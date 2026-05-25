@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-lg mx-auto space-y-5">
+
+  <div>
+    <h1 class="text-xl sm:text-2xl font-bold text-slate-800">Log Fill-Up</h1>
+    <p class="text-sm text-slate-500 mt-0.5">Record a new fuel fill-up event.</p>
+  </div>
+
+  {% if not vehicles %}
+  <div class="card text-center py-10 space-y-4">
+    <p class="text-slate-500">You need to add a vehicle before logging a fill-up.</p>
+    <a href="{{ url_for('vehicles.add_vehicle') }}" class="btn-primary mx-auto">Add Vehicle</a>
+  </div>
+  {% else %}
+
+  <div class="card">
+    <form method="POST" action="{{ url_for('fillups.add_fillup') }}" class="space-y-4" id="fillup-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <!-- Vehicle selector -->
+      <div>
+        <label for="vehicle_id" class="form-label">Vehicle <span class="text-red-400">*</span></label>
+        <select id="vehicle_id" name="vehicle_id" class="form-select" required>
+          <option value="">— Select vehicle —</option>
+          {% for vehicle in vehicles %}
+          <option value="{{ vehicle.id }}"
+            {% if form_data.get('vehicle_id')|string == vehicle.id|string %}selected{% endif %}>
+            {{ vehicle.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Date -->
+      <div>
+        <label for="date" class="form-label">Date <span class="text-red-400">*</span></label>
+        <input type="date" id="date" name="date" class="form-input"
+               value="{{ form_data.get('date', '') }}" required />
+      </div>
+
+      <!-- Odometer -->
+      <div>
+        <label for="odometer_reading" class="form-label">
+          Odometer Reading (miles) <span class="text-red-400">*</span>
+        </label>
+        <input type="number" id="odometer_reading" name="odometer_reading" class="form-input"
+               placeholder="45230" min="0" step="1" inputmode="numeric"
+               value="{{ form_data.get('odometer_reading', '') }}" required />
+        <p class="text-xs text-slate-400 mt-1">Current mileage on the odometer at time of fill-up.</p>
+      </div>
+
+      <!-- Gallons & Price — single column on mobile, side-by-side on sm+ -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="gallons_pumped" class="form-label">Gallons Pumped <span class="text-red-400">*</span></label>
+          <input type="number" id="gallons_pumped" name="gallons_pumped" class="form-input"
+                 placeholder="10.500" step="0.001" min="0.001" inputmode="decimal"
+                 value="{{ form_data.get('gallons_pumped', '') }}" required />
+        </div>
+        <div>
+          <label for="price_per_gallon" class="form-label">Price / Gallon ($)</label>
+          <input type="number" id="price_per_gallon" name="price_per_gallon" class="form-input"
+                 placeholder="3.459" step="0.001" min="0" inputmode="decimal"
+                 value="{{ form_data.get('price_per_gallon', '') }}" />
+        </div>
+      </div>
+
+      <!-- Live cost preview -->
+      <div id="cost-preview" class="hidden bg-fuel-50 border border-fuel-100 rounded-lg px-4 py-3">
+        <div class="flex justify-between items-center">
+          <span class="text-sm font-medium text-fuel-700">Estimated Total Cost</span>
+          <span id="total-cost" class="text-lg font-bold text-fuel-700">$0.00</span>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3 pt-1">
+        <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center bg-fuel-500 hover:bg-fuel-600 active:bg-fuel-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors text-sm">Save Fill-Up</button>
+        <button type="button" onclick="location.href='{{ url_for('main.index') }}'" class="w-full sm:w-auto inline-flex items-center justify-center bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold py-2.5 px-4 rounded-lg transition-colors text-sm">Cancel</button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Set the date input to the browser's local today when the field is empty
+  // (i.e. a fresh GET load). If it already has a value (POST error repopulation)
+  // we leave it alone so the user's previously entered date is preserved.
+  (function () {
+    var dateInput = document.getElementById('date');
+    if (dateInput && !dateInput.value) {
+      dateInput.value = getLocalDateString(); // defined in base.html
+    }
+  })();
+
+  const gallonsInput = document.getElementById('gallons_pumped');
+  const priceInput   = document.getElementById('price_per_gallon');
+  const preview      = document.getElementById('cost-preview');
+  const totalEl      = document.getElementById('total-cost');
+
+  function updatePreview() {
+    const g = parseFloat(gallonsInput.value);
+    const p = parseFloat(priceInput.value);
+    if (g > 0 && p > 0) {
+      totalEl.textContent = '$' + (g * p).toFixed(2);
+      preview.classList.remove('hidden');
+    } else {
+      preview.classList.add('hidden');
+    }
+  }
+
+  gallonsInput && gallonsInput.addEventListener('input', updatePreview);
+  priceInput   && priceInput.addEventListener('input', updatePreview);
+  updatePreview();
+</script>
+{% endblock %}

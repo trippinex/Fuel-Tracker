@@ -1,0 +1,852 @@
+{% extends "base.html" %}
+{% block content %}
+<div>
+
+  <!-- ── Page header (sticky) ──────────────────────────────────────────── -->
+  <div id="sticky-pg-header" class="sticky top-14 z-30 bg-slate-50 -mx-4 px-4 pt-5 sm:pt-6 pb-2">
+  <div class="flex items-center gap-3">
+    <button type="button" onclick="location.href='{{ url_for('main.index') }}'"
+            class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-slate-700 hover:border-slate-300 transition-colors shrink-0">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </button>
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Fill-Up History</h1>
+      <p class="text-sm text-slate-500 mt-0.5">
+        <span id="fillup-count"
+              data-total="{{ fillups | length }}">{{ fillups | length }}</span><span
+              id="fillup-count-label"> total fill-up{{ 's' if fillups | length != 1 else '' }} across all vehicles</span>
+      </p>
+    </div>
+  </div>
+  </div><!-- /sticky-pg-header -->
+
+  {% if not fillups %}
+  <!-- Empty account state -->
+  <div class="card text-center py-14 space-y-4">
+    <p class="text-slate-500">No fill-ups recorded yet.</p>
+    <a href="{{ url_for('fillups.add_fillup') }}" class="btn-primary mx-auto">Log First Fill-Up</a>
+  </div>
+
+  {% else %}
+
+  <!-- ── Filter + banner (sticky) ─────────────────────────────────────────── -->
+  <div id="sticky-filter" class="sticky z-20 bg-slate-50 -mx-4 px-4 pb-2 space-y-3">
+
+  {% if truncated %}
+  <!-- ── Truncation banner ─────────────────────────────────────────────────── -->
+  <div class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm">
+    <svg class="w-4 h-4 text-amber-500 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <path fill-rule="evenodd"
+        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+        clip-rule="evenodd"/>
+    </svg>
+    <p class="text-amber-800">
+      Showing the <strong>{{ history_limit }} most recent</strong> fill-ups.
+      Older records exist but are not displayed here.
+      Use the <a href="{{ url_for('settings.export_backup') }}" class="font-semibold underline underline-offset-2 hover:text-amber-900">export backup</a>
+      to access your full history.
+    </p>
+  </div>
+  {% endif %}
+
+  <!-- ── Filter bar ──────────────────────────────────────────────────────── -->
+  <div class="bg-white rounded-xl border border-slate-200 px-4 py-3">
+    <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+
+      <!-- Vehicle selector -->
+      <div class="sm:flex-1 sm:min-w-[150px] sm:max-w-[220px]">
+        <label for="flt-vehicle" class="sr-only">Vehicle</label>
+        <div class="relative">
+          <span class="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-slate-400">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
+            </svg>
+          </span>
+          <select id="flt-vehicle"
+                  class="w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-fuel-500 focus:border-transparent appearance-none">
+            <option value="">All Vehicles</option>
+            {% set seen = [] %}
+            {% for fillup, vehicle, mpg in fillups %}
+              {% if vehicle.name not in seen %}
+                <option value="{{ vehicle.name }}">{{ vehicle.name }}</option>
+                {% set _ = seen.append(vehicle.name) %}
+              {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Thin rule (desktop only) -->
+      <div class="hidden sm:block w-px h-6 bg-slate-200 shrink-0"></div>
+
+      <!-- Date-type segmented control -->
+      <div class="flex shrink-0 rounded-lg border border-slate-200 overflow-hidden text-xs font-medium divide-x divide-slate-200"
+           role="group" aria-label="Date filter type">
+        <button class="date-type-btn px-3 py-2 text-slate-500 hover:bg-slate-50 transition-colors whitespace-nowrap"
+                data-type="date">Specific Date</button>
+        <button class="date-type-btn px-3 py-2 text-slate-500 hover:bg-slate-50 transition-colors whitespace-nowrap"
+                data-type="month">Month &amp; Year</button>
+        <button class="date-type-btn px-3 py-2 text-slate-500 hover:bg-slate-50 transition-colors whitespace-nowrap"
+                data-type="year">Full Year</button>
+      </div>
+
+      <!-- Dynamic date value input (hidden until a type is chosen) -->
+      <div id="date-val-wrap" class="hidden sm:flex-1 sm:min-w-[140px] sm:max-w-[200px]">
+        <input id="fd-date" type="date"
+               class="hidden w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-fuel-500 focus:border-transparent" />
+        <input id="fd-month" type="month"
+               class="hidden w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-fuel-500 focus:border-transparent" />
+        <select id="fd-year"
+                class="hidden w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-fuel-500 focus:border-transparent appearance-none">
+          <option value="">Select year…</option>
+          {% set years = [] %}
+          {% for fillup, vehicle, mpg in fillups %}
+            {% set y = fillup.date.year | string %}
+            {% if y not in years %}
+              {% set _ = years.append(y) %}
+            {% endif %}
+          {% endfor %}
+          {% for year in years | sort(reverse=True) %}
+          <option value="{{ year }}">{{ year }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Reset button (shown only when a filter is active) -->
+      <button id="flt-reset"
+              class="hidden items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors px-2.5 py-2 rounded-lg sm:shrink-0 self-start sm:self-auto">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+        Reset
+      </button>
+
+    </div>
+  </div>
+
+  </div><!-- /sticky-filter -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MOBILE LIST  (hidden on sm+)
+  ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="sm:hidden space-y-2 mt-2" id="mobile-list">
+
+    <!-- Mobile empty state (shown when filter returns nothing) -->
+    <div id="mobile-empty-state" class="hidden">
+      <div class="bg-white border border-slate-200 rounded-xl py-14 text-center space-y-3 px-6">
+        <svg class="w-10 h-10 text-slate-300 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0016.803 15.803z"/>
+        </svg>
+        <div>
+          <p class="font-semibold text-slate-600">No fill-ups match these filters</p>
+          <p class="text-sm text-slate-400 mt-1">
+            Try adjusting your criteria or
+            <button onclick="resetFilters()"
+                    class="text-fuel-600 hover:text-fuel-700 font-medium underline underline-offset-2">
+              reset filters
+            </button>.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    {% for fillup, vehicle, mpg in fillups %}
+    <div id="card-{{ fillup.id }}"
+         data-id="{{ fillup.id }}"
+         data-vehicle="{{ vehicle.name }}"
+         data-date="{{ fillup.date.isoformat() }}"
+         class="bg-white border border-slate-200 rounded-xl px-4 py-3 transition-all duration-200">
+
+      <!-- ── VIEW mode ─────────────────────────────────────────────────── -->
+      <div data-v class="space-y-1">
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-sm font-semibold text-slate-800 truncate min-w-0">{{ vehicle.name }}</p>
+          <div class="flex items-center gap-1 shrink-0">
+            <span data-mobile-total class="text-sm font-bold text-slate-800 mr-1">
+              {% if fillup.price_per_gallon > 0 %}${{ "%.2f"|format(fillup.total_cost) }}{% else %}—{% endif %}
+            </span>
+            <button onclick="handleEditRow({{ fillup.id }})"
+                    class="p-1.5 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                    title="Edit">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+              </svg>
+            </button>
+            <button onclick="handleDeleteRow({{ fillup.id }})"
+                    class="p-1.5 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                    title="Delete">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <p class="text-xs text-slate-500" data-mobile-detail>
+          {{ fillup.date.strftime('%b %d, %Y') }}
+          &nbsp;·&nbsp; {{ "%.3f"|format(fillup.gallons_pumped) }} gal
+          &nbsp;·&nbsp; {{ "{:,}".format(fillup.odometer_reading) }} mi
+          {% if mpg %}&nbsp;·&nbsp; <span class="text-green-600 font-medium">{{ "%.1f"|format(mpg) }} MPG</span>{% endif %}
+        </p>
+      </div>
+
+      <!-- ── EDIT mode ──────────────────────────────────────────────────── -->
+      <div data-e class="hidden space-y-3">
+        <p class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Editing — {{ vehicle.name }}</p>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="col-span-2">
+            <label class="block text-xs font-medium text-slate-500 mb-1">Date</label>
+            <input data-field="date" type="date" value="{{ fillup.date.isoformat() }}"
+                   class="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Odometer</label>
+            <input data-field="odometer" type="number" inputmode="numeric" value="{{ fillup.odometer_reading }}"
+                   class="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Gallons</label>
+            <input data-field="gallons" type="number" step="0.001" inputmode="decimal" value="{{ fillup.gallons_pumped }}"
+                   class="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">$/Gal <span class="font-normal">(opt.)</span></label>
+            <input data-field="price" type="number" step="0.001" inputmode="decimal"
+                   value="{{ fillup.price_per_gallon if fillup.price_per_gallon > 0 else '' }}" placeholder="0.000"
+                   class="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent" />
+          </div>
+        </div>
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-xs text-slate-500">Total: <span data-mobile-total-edit class="font-semibold text-slate-700">—</span></p>
+          <div class="flex gap-2">
+            <button onclick="handleSaveRow({{ fillup.id }})" data-save-btn
+                    class="inline-flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+              </svg>
+              Save
+            </button>
+            <button onclick="handleCancelRow({{ fillup.id }})"
+                    class="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+        <p data-error class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></p>
+      </div>
+
+      <!-- ── CONFIRM DELETE mode ────────────────────────────────────────── -->
+      <div data-c class="hidden space-y-2.5">
+        <div class="flex items-start gap-2.5">
+          <svg class="w-4 h-4 text-red-500 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+          <div>
+            <p class="text-sm font-semibold text-slate-800">Permanently delete this fill-up?</p>
+            <p class="text-xs text-slate-500 mt-0.5">{{ fillup.date.strftime('%b %d, %Y') }} &nbsp;·&nbsp; {{ vehicle.name }}</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="handleDeleteConfirm({{ fillup.id }})" data-delete-btn
+                  class="inline-flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+            Yes, Delete
+          </button>
+          <button onclick="handleDeleteCancel({{ fillup.id }})"
+                  class="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
+            Cancel
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /card -->
+    {% endfor %}
+  </div><!-- /mobile-list -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       DESKTOP TABLE  (hidden below sm)
+  ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="desktop-table-wrapper" class="hidden sm:block card overflow-auto -mx-0 px-0 p-0 mt-2">
+    <table class="w-full text-sm" id="desktop-table">
+      <thead id="table-thead">
+        <tr class="text-xs uppercase tracking-wider text-slate-400">
+          <th class="text-left px-5 py-3 font-semibold sticky top-0 z-10 bg-white border-b border-slate-100">Vehicle</th>
+          <th class="text-left px-5 py-3 font-semibold sticky top-0 z-10 bg-white border-b border-slate-100">Date</th>
+          <th class="text-right px-5 py-3 font-semibold sticky top-0 z-10 bg-white border-b border-slate-100">Odometer</th>
+          <th class="text-right px-5 py-3 font-semibold sticky top-0 z-10 bg-white border-b border-slate-100">Gallons</th>
+          <th class="text-right px-5 py-3 font-semibold sticky top-0 z-10 bg-white border-b border-slate-100">$/Gal</th>
+          <th class="text-right px-5 py-3 font-semibold sticky top-0 z-10 bg-white border-b border-slate-100">MPG</th>
+          <th class="text-right px-5 py-3 font-semibold sticky top-0 z-10 bg-white border-b border-slate-100">Total</th>
+          <th class="text-right px-5 py-3 font-semibold sticky top-0 z-10 bg-white border-b border-slate-100">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50" id="desktop-tbody">
+
+        <!-- Desktop empty state row (shown when filter returns nothing) -->
+        <tr id="desktop-empty-row" class="hidden">
+          <td colspan="8" class="px-5 py-16 text-center">
+            <div class="flex flex-col items-center gap-3">
+              <svg class="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0016.803 15.803z"/>
+              </svg>
+              <div>
+                <p class="font-semibold text-slate-600">No fill-ups match these filters</p>
+                <p class="text-sm text-slate-400 mt-0.5">
+                  Try adjusting your criteria or
+                  <button onclick="resetFilters()"
+                          class="text-fuel-600 hover:text-fuel-700 font-medium underline underline-offset-2">
+                    reset filters
+                  </button>.
+                </p>
+              </div>
+            </div>
+          </td>
+        </tr>
+
+        {% for fillup, vehicle, mpg in fillups %}
+        <tr id="row-{{ fillup.id }}"
+            data-id="{{ fillup.id }}"
+            data-vehicle="{{ vehicle.name }}"
+            data-date="{{ fillup.date.isoformat() }}"
+            class="transition-colors duration-150">
+
+          <!-- Vehicle (static) -->
+          <td class="px-5 py-3 font-medium text-slate-700 whitespace-nowrap">{{ vehicle.name }}</td>
+
+          <!-- Date -->
+          <td data-cell="date" class="px-5 py-3 whitespace-nowrap">
+            <span data-v class="text-slate-500">{{ fillup.date.strftime('%b %d, %Y') }}</span>
+            <input data-e data-field="date" type="date" value="{{ fillup.date.isoformat() }}"
+                   class="hidden w-36 rounded border border-slate-300 px-1.5 py-1 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400" />
+          </td>
+
+          <!-- Odometer -->
+          <td data-cell="odometer" class="px-5 py-3 text-right whitespace-nowrap">
+            <span data-v class="text-slate-600">{{ "{:,}".format(fillup.odometer_reading) }}</span>
+            <input data-e data-field="odometer" type="number" inputmode="numeric" value="{{ fillup.odometer_reading }}"
+                   class="hidden w-24 rounded border border-slate-300 px-1.5 py-1 text-sm text-right text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400" />
+          </td>
+
+          <!-- Gallons -->
+          <td data-cell="gallons" class="px-5 py-3 text-right whitespace-nowrap">
+            <span data-v class="text-slate-600">{{ "%.3f"|format(fillup.gallons_pumped) }}</span>
+            <input data-e data-field="gallons" type="number" step="0.001" inputmode="decimal" value="{{ fillup.gallons_pumped }}"
+                   class="hidden w-20 rounded border border-slate-300 px-1.5 py-1 text-sm text-right text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400" />
+          </td>
+
+          <!-- $/Gal -->
+          <td data-cell="price" class="px-5 py-3 text-right whitespace-nowrap">
+            <span data-v class="text-slate-600">
+              {% if fillup.price_per_gallon > 0 %}${{ "%.3f"|format(fillup.price_per_gallon) }}{% else %}—{% endif %}
+            </span>
+            <input data-e data-field="price" type="number" step="0.001" inputmode="decimal"
+                   value="{{ fillup.price_per_gallon if fillup.price_per_gallon > 0 else '' }}" placeholder="0.000"
+                   class="hidden w-20 rounded border border-slate-300 px-1.5 py-1 text-sm text-right text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400" />
+          </td>
+
+          <!-- MPG (computed) -->
+          <td data-cell="mpg" class="px-5 py-3 text-right whitespace-nowrap">
+            <span data-v class="font-medium {% if mpg %}text-green-600{% else %}text-slate-400{% endif %}">
+              {% if mpg %}{{ "%.1f"|format(mpg) }}{% else %}—{% endif %}
+            </span>
+            <span data-e class="hidden text-xs text-slate-400 italic">recalc</span>
+          </td>
+
+          <!-- Total (live preview in edit) -->
+          <td data-cell="total" class="px-5 py-3 text-right whitespace-nowrap">
+            <span data-v class="font-semibold text-slate-800">
+              {% if fillup.price_per_gallon > 0 %}${{ "%.2f"|format(fillup.total_cost) }}{% else %}—{% endif %}
+            </span>
+            <span data-e data-total-live class="hidden text-sm font-semibold text-slate-600">—</span>
+          </td>
+
+          <!-- Actions -->
+          <td class="px-5 py-3 text-right whitespace-nowrap">
+
+            <div data-v class="flex gap-1.5 justify-end items-center">
+              <button onclick="handleEditRow({{ fillup.id }})"
+                      class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-2 py-1.5 rounded transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                Edit
+              </button>
+              <button onclick="handleDeleteRow({{ fillup.id }})"
+                      class="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-red-600 hover:bg-red-50 px-2 py-1.5 rounded transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+            </div>
+
+            <div data-e class="hidden flex gap-1.5 justify-end items-center">
+              <button onclick="handleSaveRow({{ fillup.id }})" data-save-btn
+                      class="inline-flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white text-xs font-semibold px-2.5 py-1.5 rounded-md transition-colors">
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+                Save
+              </button>
+              <button onclick="handleCancelRow({{ fillup.id }})"
+                      class="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold px-2.5 py-1.5 rounded-md transition-colors">
+                Cancel
+              </button>
+            </div>
+
+            <div data-c class="hidden flex gap-1.5 justify-end items-center">
+              <span class="text-xs text-red-600 font-medium mr-0.5">Delete?</span>
+              <button onclick="handleDeleteConfirm({{ fillup.id }})" data-delete-btn
+                      class="inline-flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold px-2.5 py-1.5 rounded-md transition-colors">
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+                Yes
+              </button>
+              <button onclick="handleDeleteCancel({{ fillup.id }})"
+                      class="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold px-2.5 py-1.5 rounded-md transition-colors">
+                No
+              </button>
+            </div>
+
+            <p data-error class="hidden text-xs text-red-600 mt-1 text-right max-w-[200px] ml-auto"></p>
+
+          </td>
+        </tr>
+        {% endfor %}
+
+      </tbody>
+    </table>
+  </div><!-- /desktop table -->
+
+  {% endif %}
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     ▌ SECTION 1 — ROW EDIT / DELETE
+  ═══════════════════════════════════════════════════════════════════════ */
+
+  function row(id)  { return document.getElementById(`row-${id}`);  }
+  function card(id) { return document.getElementById(`card-${id}`); }
+
+  function applyMode(container, mode) {
+    if (!container) return;
+    container.querySelectorAll('[data-v]').forEach(n => n.classList.toggle('hidden', mode !== 'view'));
+    container.querySelectorAll('[data-e]').forEach(n => n.classList.toggle('hidden', mode !== 'edit'));
+    container.querySelectorAll('[data-c]').forEach(n => n.classList.toggle('hidden', mode !== 'confirm'));
+  }
+
+  function setMode(id, mode) {
+    const r = row(id);
+    const c = card(id);
+    applyMode(r, mode);
+    applyMode(c, mode);
+
+    if (r) {
+      r.style.backgroundColor =
+        mode === 'edit'    ? '#eef2ff' :
+        mode === 'confirm' ? '#fff7ed' : '';
+    }
+    if (c) {
+      c.classList.toggle('border-indigo-300', mode === 'edit');
+      c.classList.toggle('border-amber-300',  mode === 'confirm');
+      c.classList.toggle('border-slate-200',  mode === 'view');
+    }
+
+    if (mode === 'edit') {
+      wireLiveTotal(id);
+      const first = (r || c)?.querySelector('[data-e] input');
+      first?.focus();
+    }
+    clearError(id);
+  }
+
+  function wireLiveTotal(id) {
+    [[row(id), '[data-total-live]'], [card(id), '[data-mobile-total-edit]']].forEach(([el, sel]) => {
+      if (!el) return;
+      const g = el.querySelector('[data-field="gallons"]');
+      const p = el.querySelector('[data-field="price"]');
+      const t = el.querySelector(sel);
+      const update = () => {
+        const gv = parseFloat(g?.value) || 0;
+        const pv = parseFloat(p?.value) || 0;
+        if (t) t.textContent = pv > 0 ? `$${(gv * pv).toFixed(2)}` : '—';
+      };
+      g?.addEventListener('input', update);
+      p?.addEventListener('input', update);
+      update();
+    });
+  }
+
+  function showError(id, msg) {
+    [row(id), card(id)].filter(Boolean).forEach(el => {
+      const e = el.querySelector('[data-error]');
+      if (e) { e.textContent = msg; e.classList.remove('hidden'); }
+    });
+  }
+
+  function clearError(id) {
+    [row(id), card(id)].filter(Boolean).forEach(el => {
+      const e = el.querySelector('[data-error]');
+      if (e) { e.textContent = ''; e.classList.add('hidden'); }
+    });
+  }
+
+  function getValues(id) {
+    const isDesktop = window.matchMedia('(min-width: 640px)').matches;
+    const c = isDesktop ? row(id) : card(id);
+    return {
+      date:             c?.querySelector('[data-field="date"]')?.value     ?? '',
+      odometer_reading: c?.querySelector('[data-field="odometer"]')?.value ?? '',
+      gallons_pumped:   c?.querySelector('[data-field="gallons"]')?.value  ?? '',
+      price_per_gallon: c?.querySelector('[data-field="price"]')?.value    ?? '',
+    };
+  }
+
+  function applyUpdate(id, f) {
+    const r = row(id);
+    if (r) {
+      r.querySelector('[data-cell="date"] [data-v]').textContent     = f.date_display;
+      r.querySelector('[data-cell="odometer"] [data-v]').textContent = f.odometer_display;
+      r.querySelector('[data-cell="gallons"] [data-v]').textContent  = f.gallons_display;
+      r.querySelector('[data-cell="price"] [data-v]').textContent    = f.price_display;
+      r.querySelector('[data-cell="total"] [data-v]').textContent    = f.total_display;
+      const mpgSpan = r.querySelector('[data-cell="mpg"] [data-v]');
+      mpgSpan.textContent = f.mpg_display;
+      mpgSpan.className   = f.mpg ? 'font-medium text-green-600' : 'font-medium text-slate-400';
+      // Refresh inputs
+      r.querySelector('[data-field="date"]').value     = f.date;
+      r.querySelector('[data-field="odometer"]').value = f.odometer_reading;
+      r.querySelector('[data-field="gallons"]').value  = f.gallons_pumped;
+      r.querySelector('[data-field="price"]').value    = f.price_per_gallon > 0 ? f.price_per_gallon : '';
+      // Also update the data-date attribute so the filter still works correctly
+      r.dataset.date = f.date;
+    }
+    const c = card(id);
+    if (c) {
+      const tot    = c.querySelector('[data-mobile-total]');
+      const detail = c.querySelector('[data-mobile-detail]');
+      if (tot)    tot.textContent = f.total_display;
+      if (detail) {
+        let d = `${f.date_display} · ${f.gallons_display} gal · ${f.odometer_display} mi`;
+        if (f.mpg) d += ` · ${f.mpg_display} MPG`;
+        detail.innerHTML = d;
+      }
+      c.querySelector('[data-field="date"]').value     = f.date;
+      c.querySelector('[data-field="odometer"]').value = f.odometer_reading;
+      c.querySelector('[data-field="gallons"]').value  = f.gallons_pumped;
+      c.querySelector('[data-field="price"]').value    = f.price_per_gallon > 0 ? f.price_per_gallon : '';
+      c.dataset.date = f.date;
+    }
+  }
+
+  function flashSuccess(id) {
+    const r = row(id);
+    if (r) { r.style.backgroundColor = '#f0fdf4'; setTimeout(() => { r.style.backgroundColor = ''; }, 1400); }
+    const c = card(id);
+    if (c) { c.classList.add('border-green-400'); setTimeout(() => c.classList.remove('border-green-400'), 1400); }
+  }
+
+  function animateRemove(id) {
+    [row(id), card(id)].filter(Boolean).forEach(el => {
+      el.style.transition = 'opacity 0.25s, transform 0.25s';
+      el.style.opacity    = '0';
+      el.style.transform  = 'translateX(12px)';
+    });
+    setTimeout(() => {
+      [row(id), card(id)].filter(Boolean).forEach(el => el.remove());
+      decrementTotal();
+      filterRecords(); // re-evaluate count + empty state
+    }, 270);
+  }
+
+  /** Decrement the stored total (not the displayed count — filter owns that). */
+  function decrementTotal() {
+    const el = document.getElementById('fillup-count');
+    if (el) {
+      const t = Math.max(0, parseInt(el.dataset.total || '0', 10) - 1);
+      el.dataset.total = t;
+    }
+  }
+
+  function setBtnLoading(id, sel, text) {
+    [row(id), card(id)].filter(Boolean).forEach(c => {
+      const b = c.querySelector(sel); if (b) { b.disabled = true; b.textContent = text; }
+    });
+  }
+
+  function resetBtn(id, sel, html) {
+    [row(id), card(id)].filter(Boolean).forEach(c => {
+      const b = c.querySelector(sel); if (b) { b.disabled = false; b.innerHTML = html; }
+    });
+  }
+
+  const checkSvg   = `<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
+  const trashSvg   = `<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
+
+  // ── Public edit/delete API ──────────────────────────────────────────────
+  window.handleEditRow      = id => setMode(id, 'edit');
+  window.handleCancelRow    = id => setMode(id, 'view');
+  window.handleDeleteRow    = id => setMode(id, 'confirm');
+  window.handleDeleteCancel = id => setMode(id, 'view');
+
+  window.handleSaveRow = async function (id) {
+    setBtnLoading(id, '[data-save-btn]', 'Saving…');
+    let result;
+    try {
+      const resp = await fetch(`/fillups/${id}/edit`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body:    JSON.stringify(getValues(id)),
+      });
+      result = await resp.json();
+    } catch {
+      showError(id, 'Network error — please try again.');
+      resetBtn(id, '[data-save-btn]', `${checkSvg} Save`);
+      return;
+    }
+    if (!result.success) {
+      showError(id, result.error || 'Save failed.');
+      resetBtn(id, '[data-save-btn]', `${checkSvg} Save`);
+      return;
+    }
+    applyUpdate(id, result.fillup);
+    setMode(id, 'view');
+    flashSuccess(id);
+    filterRecords(); // date may have changed — re-evaluate visibility
+  };
+
+  window.handleDeleteConfirm = async function (id) {
+    setBtnLoading(id, '[data-delete-btn]', 'Deleting…');
+    let result;
+    try {
+      const resp = await fetch(`/fillups/${id}/delete`, {
+        method:  'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      result = await resp.json();
+    } catch {
+      showError(id, 'Network error — please try again.');
+      setMode(id, 'view');
+      return;
+    }
+    if (!result.success) {
+      showError(id, result.error || 'Delete failed.');
+      setMode(id, 'view');
+      return;
+    }
+    animateRemove(id);
+  };
+
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     ▌ SECTION 2 — FILTER BAR
+  ═══════════════════════════════════════════════════════════════════════ */
+
+  // ── DOM refs ──────────────────────────────────────────────────────────
+  const fltVehicle    = document.getElementById('flt-vehicle');
+  const fltReset      = document.getElementById('flt-reset');
+  const dateValWrap   = document.getElementById('date-val-wrap');
+  const fdDate        = document.getElementById('fd-date');
+  const fdMonth       = document.getElementById('fd-month');
+  const fdYear        = document.getElementById('fd-year');
+  const countEl       = document.getElementById('fillup-count');
+  const countLabelEl  = document.getElementById('fillup-count-label');
+  const desktopEmpty  = document.getElementById('desktop-empty-row');
+  const mobileEmpty   = document.getElementById('mobile-empty-state');
+
+  let currentDateType = ''; // '', 'date', 'month', 'year'
+
+  // ── Segmented date-type buttons ───────────────────────────────────────
+  document.querySelectorAll('.date-type-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const type     = this.dataset.type;
+      const isActive = this.classList.contains('is-active');
+
+      // Clear all active states
+      document.querySelectorAll('.date-type-btn').forEach(b => {
+        b.classList.remove('is-active', 'bg-fuel-500', 'text-white');
+        b.classList.add('text-slate-500');
+      });
+
+      if (isActive) {
+        // Toggle off → back to "All Time"
+        currentDateType = '';
+      } else {
+        // Activate this button
+        this.classList.add('is-active', 'bg-fuel-500', 'text-white');
+        this.classList.remove('text-slate-500');
+        currentDateType = type;
+      }
+
+      syncDateInput();
+      filterRecords();
+    });
+  });
+
+  /** Show the correct date input for the current type, hide others. */
+  function syncDateInput() {
+    const show = currentDateType !== '';
+    dateValWrap.classList.toggle('hidden', !show);
+
+    fdDate.classList.toggle('hidden',  currentDateType !== 'date');
+    fdMonth.classList.toggle('hidden', currentDateType !== 'month');
+    fdYear.classList.toggle('hidden',  currentDateType !== 'year');
+
+    // Clear the inactive inputs so stale values don't leak into filter logic
+    if (currentDateType !== 'date')  fdDate.value  = '';
+    if (currentDateType !== 'month') fdMonth.value = '';
+    if (currentDateType !== 'year')  fdYear.value  = '';
+  }
+
+  /** Read the currently relevant date value. */
+  function getDateValue() {
+    if (currentDateType === 'date')  return fdDate.value;
+    if (currentDateType === 'month') return fdMonth.value;
+    if (currentDateType === 'year')  return fdYear.value;
+    return '';
+  }
+
+  // ── Core filter function ──────────────────────────────────────────────
+  function filterRecords() {
+    const vehicleFilter = fltVehicle?.value   || '';
+    const dateVal       = getDateValue();
+    const isFiltered    = !!(vehicleFilter || (currentDateType && dateVal));
+
+    // Show/hide reset button
+    if (fltReset) fltReset.classList.toggle('hidden', !isFiltered);
+    if (fltReset) fltReset.style.display = isFiltered ? 'inline-flex' : '';
+
+    let visibleCount = 0;
+    const rows = document.querySelectorAll('#desktop-tbody tr[data-id]');
+
+    rows.forEach(tr => {
+      const id = tr.dataset.id;
+
+      // Vehicle check
+      const vehicleMatch = !vehicleFilter || tr.dataset.vehicle === vehicleFilter;
+
+      // Date check
+      let dateMatch = true;
+      if (currentDateType && dateVal) {
+        const d = tr.dataset.date || '';
+        if      (currentDateType === 'date')  dateMatch = d === dateVal;
+        else if (currentDateType === 'month') dateMatch = d.slice(0, 7) === dateVal;
+        else if (currentDateType === 'year')  dateMatch = d.slice(0, 4) === dateVal;
+      }
+
+      const show = vehicleMatch && dateMatch;
+      tr.classList.toggle('hidden', !show);
+
+      const c = card(id);
+      if (c) c.classList.toggle('hidden', !show);
+
+      if (show) visibleCount++;
+    });
+
+    // Update subtitle
+    updateSubtitle(visibleCount, isFiltered);
+
+    // Empty state
+    const isEmpty = visibleCount === 0;
+    if (desktopEmpty) desktopEmpty.classList.toggle('hidden', !isEmpty);
+    if (mobileEmpty)  mobileEmpty.classList.toggle('hidden',  !isEmpty);
+  }
+
+  function updateSubtitle(visible, isFiltered) {
+    if (!countEl || !countLabelEl) return;
+    const total = parseInt(countEl.dataset.total || '0', 10);
+    if (isFiltered) {
+      countEl.textContent      = visible;
+      countLabelEl.textContent = ` matching fill-up${visible !== 1 ? 's' : ''} found`;
+    } else {
+      countEl.textContent      = total;
+      countLabelEl.textContent = ` total fill-up${total !== 1 ? 's' : ''} across all vehicles`;
+    }
+  }
+
+  /** Reset all filters and restore the full list. */
+  window.resetFilters = function () {
+    if (fltVehicle) fltVehicle.value = '';
+
+    document.querySelectorAll('.date-type-btn').forEach(b => {
+      b.classList.remove('is-active', 'bg-fuel-500', 'text-white');
+      b.classList.add('text-slate-500');
+    });
+    currentDateType = '';
+    syncDateInput();
+    filterRecords();
+  };
+
+  // ── Event wiring ──────────────────────────────────────────────────────
+  fltVehicle?.addEventListener('change', filterRecords);
+  fdDate?.addEventListener('change',  filterRecords);
+  fdMonth?.addEventListener('change', filterRecords);
+  fdYear?.addEventListener('change',  filterRecords);
+
+  // ── Initialise ────────────────────────────────────────────────────────
+  syncDateInput();
+  filterRecords();
+
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     ▌ SECTION 3 — STICKY OFFSET CALCULATION
+     The filter bar stacks below the page header; the desktop table's
+     max-height is constrained so it fills the remaining viewport and
+     scrolls independently with the thead pinned at top-0 within it.
+  ═══════════════════════════════════════════════════════════════════════ */
+  const NAV_H       = 56; // nav is h-14 = 56 px, sticky top-0
+  const pgHeaderEl  = document.getElementById('sticky-pg-header');
+  const filterEl2   = document.getElementById('sticky-filter');
+  const tableWrapEl = document.getElementById('desktop-table-wrapper');
+
+  function updateStickyLayout() {
+    if (!pgHeaderEl) return;
+    const pgH     = pgHeaderEl.offsetHeight;
+    const filterH = filterEl2 ? filterEl2.offsetHeight : 0;
+
+    // Stack the filter sticky div directly below the page-header sticky div.
+    if (filterEl2) {
+      filterEl2.style.top = (NAV_H + pgH) + 'px';
+    }
+
+    // Give the desktop table wrapper a max-height so it fills the rest of
+    // the viewport and scrolls on its own; thead is sticky at top-0 within
+    // this scroll container.
+    if (tableWrapEl) {
+      const usedPx = NAV_H + pgH + filterH + 8 /* mt-2 */ + 24 /* bottom breathe */;
+      tableWrapEl.style.maxHeight = 'calc(100vh - ' + usedPx + 'px)';
+    }
+  }
+
+  // Recalculate whenever either sticky element changes size (e.g. filter
+  // expands when a date type is selected, or window resizes).
+  [pgHeaderEl, filterEl2].forEach(function (el) {
+    if (el && window.ResizeObserver) {
+      new ResizeObserver(updateStickyLayout).observe(el);
+    }
+  });
+  updateStickyLayout();
+  window.addEventListener('resize', updateStickyLayout);
+
+})();
+</script>
+{% endblock %}

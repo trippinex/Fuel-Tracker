@@ -1,0 +1,64 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Flask / SQLite runtime files ──────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# ── Secrets & environment ─────────────────────────────────────────────────────
+.env
+.env.*
+*.env
+secrets.json
+service_account*.json
+
+# ── Uploaded photos (runtime data, stored on server) ─────────────────────────
+photos/
+data/
+
+# ── Test & coverage artifacts ─────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ── IDEs ──────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Claude Code local config ──────────────────────────────────────────────────
+.claude/
+
+# ── Deployment artifacts ──────────────────────────────────────────────────────
+*.tar.gz
+*.zip
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+*.log
+*.bak
+*.tmp

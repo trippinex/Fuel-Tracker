@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% block title %}Settings — FuelTrack{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+
+  <!-- Page header -->
+  <div class="flex items-center gap-3">
+    <button type="button" onclick="location.href='{{ url_for('main.index') }}'"
+            class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-slate-700 hover:border-slate-300 transition-colors shrink-0">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </button>
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Settings</h1>
+      <p class="text-sm text-slate-500 mt-0.5">Account and data management</p>
+    </div>
+  </div>
+
+  <!-- ── Account card ──────────────────────────────────────────────────────── -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="p-6 sm:p-8">
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4">Account</p>
+      <div class="flex items-center gap-4">
+        {% if current_user.picture %}
+        <img src="{{ current_user.picture }}" alt="{{ current_user.name }}"
+             class="w-14 h-14 rounded-full ring-2 ring-fuel-400 shrink-0"
+             referrerpolicy="no-referrer" />
+        {% else %}
+        <div class="w-14 h-14 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
+          <svg class="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
+          </svg>
+        </div>
+        {% endif %}
+        <div class="min-w-0">
+          <p class="font-semibold text-slate-800 truncate">{{ current_user.name or '—' }}</p>
+          <p class="text-sm text-slate-500 truncate">{{ current_user.email }}</p>
+          <p class="text-xs text-slate-400 mt-0.5">Signed in with Google</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Data management card ──────────────────────────────────────────────── -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+
+    <!-- Card header -->
+    <div class="p-6 sm:p-8 pb-0">
+      <div class="flex items-center gap-2 mb-1">
+        <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"/>
+        </svg>
+        <h2 class="text-base font-semibold text-slate-800">Data Management</h2>
+      </div>
+      <p class="text-sm text-slate-500">
+        Export your vehicles and fill-up history to a portable JSON file,
+        or restore from a previous backup.
+      </p>
+    </div>
+
+    <!-- What's included -->
+    <div class="mx-6 sm:mx-8 mt-5 bg-slate-50 rounded-xl border border-slate-100 px-4 py-3.5">
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2.5">What's in a backup</p>
+      <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-xs text-slate-500">
+        <div class="flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          All vehicles
+        </div>
+        <div class="flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          Full fill-up history
+        </div>
+        <div class="flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          VIN &amp; license plate
+        </div>
+        <div class="flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-amber-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+          Vehicle photos not included
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Export ── -->
+    <div class="p-6 sm:p-8 space-y-3">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-700">Export Backup</h3>
+        <p class="text-xs text-slate-400 mt-0.5">
+          Downloads a timestamped
+          <code class="bg-slate-100 px-1 py-0.5 rounded text-slate-600 text-[11px]">fueltrack-backup-YYYY-MM-DD_HH-MM.json</code>
+          file using your local date and time.
+        </p>
+      </div>
+      <a id="export-link" href="{{ url_for('settings.export_backup') }}"
+         class="inline-flex items-center gap-2 bg-fuel-500 hover:bg-fuel-600 active:bg-fuel-700 text-white font-semibold py-3 px-5 rounded-xl transition-colors text-sm shadow-sm">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Export Backup
+      </a>
+    </div>
+
+    <div class="border-t border-slate-100"></div>
+
+    <!-- ── Import ── -->
+    <div class="p-6 sm:p-8 space-y-4">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-700">Import Backup</h3>
+        <p class="text-xs text-slate-400 mt-0.5">
+          Restore from a <code class="bg-slate-100 px-1 py-0.5 rounded text-slate-600 text-[11px]">.json</code>
+          file exported from FuelTrack.
+        </p>
+      </div>
+
+      <!-- Warning banner -->
+      <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2.5">
+        <svg class="w-4 h-4 mt-0.5 shrink-0 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+        </svg>
+        <p class="text-xs text-amber-800 leading-relaxed">
+          <strong>Caution:</strong> Importing replaces <em>all</em> current vehicles and fill-up records
+          with the contents of the selected file. Export your current data first if you want to keep it.
+          This action cannot be undone.
+        </p>
+      </div>
+
+      <form id="import-form" method="POST"
+            action="{{ url_for('settings.import_backup') }}"
+            enctype="multipart/form-data"
+            class="space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Drop zone -->
+        <label id="drop-zone" for="backup-file"
+               class="flex flex-col items-center justify-center gap-2 w-full py-8 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer bg-slate-50 hover:bg-fuel-50 hover:border-fuel-300 transition-colors group">
+          <svg class="w-8 h-8 text-slate-300 group-hover:text-fuel-400 transition-colors"
+               fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+          </svg>
+          <div class="text-center">
+            <p class="text-sm font-semibold text-slate-500 group-hover:text-fuel-600 transition-colors">
+              Click to choose a backup file
+              <span class="font-normal text-slate-400">or drag and drop</span>
+            </p>
+            <p class="text-xs text-slate-400 mt-0.5">FuelTrack JSON backup</p>
+          </div>
+          <input type="file" id="backup-file" name="backup_file"
+                 accept=".json,application/json" class="sr-only" />
+        </label>
+
+        <!-- Selected file indicator (hidden until file chosen) -->
+        <div id="file-chosen"
+             class="hidden flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+          <svg class="w-8 h-8 text-fuel-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+          </svg>
+          <div class="min-w-0 flex-1">
+            <p id="chosen-filename" class="text-sm font-semibold text-slate-700 truncate"></p>
+            <p id="chosen-size" class="text-xs text-slate-400 mt-0.5"></p>
+          </div>
+          <button type="button" id="clear-file"
+                  class="text-slate-300 hover:text-slate-600 transition-colors p-1 shrink-0"
+                  title="Remove selection">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" id="import-btn" disabled
+                class="inline-flex items-center gap-2 font-semibold py-3 px-5 rounded-xl text-sm transition-colors
+                       bg-slate-100 text-slate-400 cursor-not-allowed">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+          Import &amp; Restore
+        </button>
+
+      </form>
+    </div>
+
+  </div><!-- /data management card -->
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  /* ── Export: stamp the download URL with the browser's local date + time ── */
+  var exportLink = document.getElementById('export-link');
+  if (exportLink) {
+    exportLink.addEventListener('click', function () {
+      // Build "YYYY-MM-DD_HH-MM" from browser local time.
+      // getLocalDateString() is defined in base.html and always available.
+      var now = new Date();
+      var hh  = String(now.getHours()).padStart(2, '0');
+      var mm  = String(now.getMinutes()).padStart(2, '0');
+      var ts  = getLocalDateString() + '_' + hh + '-' + mm;
+      // Update href before the browser follows it — no page reload needed.
+      this.href = '{{ url_for("settings.export_backup") }}?ts=' + ts;
+    });
+  }
+})();
+
+(function () {
+  const fileInput  = document.getElementById('backup-file');
+  const dropZone   = document.getElementById('drop-zone');
+  const fileChosen = document.getElementById('file-chosen');
+  const nameEl     = document.getElementById('chosen-filename');
+  const sizeEl     = document.getElementById('chosen-size');
+  const clearBtn   = document.getElementById('clear-file');
+  const importBtn  = document.getElementById('import-btn');
+  const form       = document.getElementById('import-form');
+
+  /* ── helpers ── */
+  function fmtBytes(b) {
+    if (b < 1024)    return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+  }
+
+  function enableBtn() {
+    importBtn.disabled = false;
+    importBtn.className = [
+      'inline-flex items-center gap-2 font-semibold py-3 px-5 rounded-xl text-sm transition-colors',
+      'bg-white border border-slate-300 text-slate-700',
+      'hover:bg-red-50 hover:border-red-300 hover:text-red-700 cursor-pointer',
+    ].join(' ');
+  }
+
+  function disableBtn() {
+    importBtn.disabled = true;
+    importBtn.className = [
+      'inline-flex items-center gap-2 font-semibold py-3 px-5 rounded-xl text-sm transition-colors',
+      'bg-slate-100 text-slate-400 cursor-not-allowed',
+    ].join(' ');
+  }
+
+  function showFile(file) {
+    nameEl.textContent = file.name;
+    sizeEl.textContent = fmtBytes(file.size);
+    dropZone.classList.add('hidden');
+    fileChosen.classList.remove('hidden');
+    enableBtn();
+  }
+
+  function clearFile() {
+    fileInput.value    = '';
+    nameEl.textContent = '';
+    sizeEl.textContent = '';
+    fileChosen.classList.add('hidden');
+    dropZone.classList.remove('hidden');
+    disableBtn();
+  }
+
+  /* ── events ── */
+  fileInput.addEventListener('change', function () {
+    if (this.files[0]) showFile(this.files[0]);
+  });
+
+  clearBtn.addEventListener('click', clearFile);
+
+  /* drag-and-drop */
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('border-fuel-400', 'bg-fuel-50');
+  });
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('border-fuel-400', 'bg-fuel-50');
+  });
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('border-fuel-400', 'bg-fuel-50');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      fileInput.files = dt.files;
+      showFile(file);
+    }
+  });
+
+  /* confirmation before submit */
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    const ok = confirm(
+      'Replace ALL current data with this backup?\n\n' +
+      'File: ' + file.name + '\n\n' +
+      'This will permanently delete your existing vehicles and fill-up history ' +
+      'and replace them with the contents of the selected file.\n\n' +
+      'This action cannot be undone. Continue?'
+    );
+    if (ok) this.submit();
+  });
+})();
+</script>
+{% endblock %}

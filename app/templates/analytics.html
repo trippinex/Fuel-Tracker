@@ -1,0 +1,654 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div class="flex items-center gap-3">
+
+      <!-- Vehicle thumbnail — swaps when dropdown changes -->
+      <div class="shrink-0" style="width:85px;height:64px;">
+        <img id="analytics-thumb"
+             src="" alt="Vehicle"
+             style="width:85px;height:64px;object-fit:cover;border-radius:6px;"
+             class="hidden" />
+        <div id="analytics-thumb-placeholder"
+             style="width:85px;height:64px;border-radius:6px;"
+             class="bg-slate-100 flex items-center justify-center">
+          <svg class="w-7 h-7 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Heading text -->
+      <div>
+        <h1 class="text-2xl font-bold text-slate-800">Analytics</h1>
+        <p class="text-sm text-slate-500 mt-0.5">Performance metrics and trends</p>
+      </div>
+
+    </div>
+  </div>
+
+  {% if not vehicles %}
+  <div class="card text-center py-14 space-y-4">
+    <p class="text-slate-500">No vehicles yet. Add one to see analytics.</p>
+    <a href="{{ url_for('vehicles.add_vehicle') }}" class="btn-primary mx-auto">Add Vehicle</a>
+  </div>
+
+  {% else %}
+
+  <!-- Vehicle selector + filter bar -->
+  <div class="card">
+    <form method="GET" action="{{ url_for('analytics.analytics') }}" class="flex flex-col sm:flex-row gap-3 items-end">
+      <div class="flex-1">
+        <label for="vehicle_id" class="form-label">Select Vehicle</label>
+        <select id="vehicle_id" name="vehicle_id" class="form-select" onchange="this.form.submit()">
+          {% for vehicle in vehicles %}
+          <option value="{{ vehicle.id }}"
+                  data-photo="{{ url_for('vehicles.vehicle_photo', filename=vehicle.photo_filename) if vehicle.photo_filename else '' }}"
+                  {% if selected_vehicle and selected_vehicle.id == vehicle.id %}selected{% endif %}>
+            {{ vehicle.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <noscript>
+        <button type="submit" class="btn-secondary">Load</button>
+      </noscript>
+    </form>
+
+    {% if stats and stats.has_data %}
+    <!-- ── Date filter bar ── -->
+    <div id="analytics-filter" class="mt-4 pt-4 border-t border-slate-100 space-y-3">
+
+      <!-- Mode buttons -->
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="text-xs font-semibold uppercase tracking-wide text-slate-400 shrink-0">Filter by</span>
+        <div class="flex rounded-lg overflow-hidden border border-slate-200">
+          <button type="button" class="analytics-mode-btn px-3 py-1.5 text-xs sm:text-sm font-medium bg-slate-800 text-white transition-colors" data-mode="all">All Time</button>
+          <button type="button" class="analytics-mode-btn px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-600 border-l border-slate-200 transition-colors" data-mode="range">Date Range</button>
+          <button type="button" class="analytics-mode-btn px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-600 border-l border-slate-200 transition-colors" data-mode="month">Month</button>
+          <button type="button" class="analytics-mode-btn px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-600 border-l border-slate-200 transition-colors" data-mode="year">Year</button>
+        </div>
+        <span id="filter-active-badge" class="hidden text-xs font-semibold text-fuel-600 bg-fuel-50 rounded-full px-2.5 py-0.5">● Filtered</span>
+      </div>
+
+      <!-- Date Range inputs -->
+      <div id="filter-inputs-range" class="hidden">
+        <div class="flex flex-wrap gap-3 items-end">
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">From</label>
+            <input type="date" id="fi-range-start"
+                   class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-fuel-500 focus:border-transparent" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">To</label>
+            <input type="date" id="fi-range-end"
+                   class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-fuel-500 focus:border-transparent" />
+          </div>
+          <button type="button" id="fi-range-apply"
+                  class="inline-flex items-center justify-center bg-fuel-500 hover:bg-fuel-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+            Apply
+          </button>
+        </div>
+      </div>
+
+      <!-- Month & Year inputs -->
+      <div id="filter-inputs-month" class="hidden">
+        <div class="flex flex-wrap gap-3 items-end">
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Month</label>
+            <select id="fi-month"
+                    class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-fuel-500 bg-white">
+              <option value="01">January</option>
+              <option value="02">February</option>
+              <option value="03">March</option>
+              <option value="04">April</option>
+              <option value="05">May</option>
+              <option value="06">June</option>
+              <option value="07">July</option>
+              <option value="08">August</option>
+              <option value="09">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Year</label>
+            <select id="fi-month-year"
+                    class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-fuel-500 bg-white">
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Year input -->
+      <div id="filter-inputs-year" class="hidden">
+        <div class="flex flex-wrap gap-3 items-end">
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Year</label>
+            <select id="fi-year"
+                    class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-fuel-500 bg-white">
+            </select>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    {% endif %}
+  </div>
+
+  {% if stats and not stats.has_data %}
+  <div class="card text-center py-10 space-y-3">
+    <p class="text-slate-500 font-medium">No fill-ups recorded for <strong>{{ selected_vehicle.name }}</strong> yet.</p>
+    <a href="{{ url_for('fillups.add_fillup', vehicle_id=selected_vehicle.id) }}" class="btn-primary mx-auto">
+      Log First Fill-Up
+    </a>
+  </div>
+
+  {% elif stats %}
+
+  {% set has_mpg = stats.avg_mpg is not none %}
+
+  <!-- Insufficient banner — JS controls visibility based on filtered count -->
+  <div id="insufficient-banner"
+       class="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-4 py-3 text-sm flex items-start gap-2{% if stats.fill_ups_count >= 2 %} hidden{% endif %}">
+    <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+    </svg>
+    <span>
+      MPG and distance metrics require at least <strong>2 fill-ups</strong> in the selected period.
+      <a href="{{ url_for('fillups.add_fillup', vehicle_id=selected_vehicle.id) }}" class="underline font-medium">Add another fill-up</a> to unlock full analytics.
+    </span>
+  </div>
+
+  <!-- Filter notice — shown when filtered set is empty -->
+  <div id="filter-notice" class="hidden card text-center py-12 space-y-4">
+    <svg class="w-10 h-10 text-slate-300 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+    </svg>
+    <div>
+      <p class="text-slate-600 font-medium">No fill-ups in the selected timeframe.</p>
+      <p class="text-sm text-slate-400 mt-1">Try a different date range or reset the filter.</p>
+    </div>
+    <button type="button" onclick="window.resetAnalyticsFilter()" class="btn-secondary mx-auto">
+      Reset Filter
+    </button>
+  </div>
+
+  <!-- ── All metrics — wrapped so JS can show/hide ── -->
+  <div id="metrics-section">
+
+    <!-- ── Efficiency Metrics ── -->
+    <div class="mb-6">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Efficiency</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Avg MPG</span>
+          <span id="stat-avg-mpg" class="text-2xl font-bold {% if has_mpg %}text-green-600{% else %}text-slate-800{% endif %}">
+            {{ "%.1f"|format(stats.avg_mpg) if has_mpg else "—" }}
+          </span>
+          <span class="text-xs text-slate-400">miles per gallon</span>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Best MPG</span>
+          <span id="stat-best-mpg" class="text-2xl font-bold {% if has_mpg %}text-emerald-600{% else %}text-slate-800{% endif %}">
+            {{ "%.1f"|format(stats.best_mpg) if has_mpg else "—" }}
+          </span>
+          <span class="text-xs text-slate-400">highest recorded</span>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Worst MPG</span>
+          <span id="stat-worst-mpg" class="text-2xl font-bold {% if has_mpg %}text-orange-500{% else %}text-slate-800{% endif %}">
+            {{ "%.1f"|format(stats.worst_mpg) if has_mpg else "—" }}
+          </span>
+          <span class="text-xs text-slate-400">lowest recorded</span>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Est. Range</span>
+          <span id="stat-est-range" class="text-2xl font-bold text-slate-800">
+            {{ "%.0f"|format(stats.estimated_range) ~ " mi" if stats.estimated_range else "—" }}
+          </span>
+          <span class="text-xs text-slate-400">on a full tank</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Volume & Distance ── -->
+    <div class="mb-6">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Volume &amp; Distance</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Gallons</span>
+          <span id="stat-total-gallons" class="text-2xl font-bold text-slate-800">{{ "%.2f"|format(stats.total_gallons) }}</span>
+          <span class="text-xs text-slate-400">pumped in period</span>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Miles</span>
+          <span id="stat-total-miles" class="text-2xl font-bold text-slate-800">{{ "{:,}".format(stats.total_miles) }}</span>
+          <span class="text-xs text-slate-400">tracked</span>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Avg Distance</span>
+          <span id="stat-avg-distance" class="text-2xl font-bold text-slate-800">
+            {{ "%.0f"|format(stats.avg_distance) ~ " mi" if stats.avg_distance else "—" }}
+          </span>
+          <span class="text-xs text-slate-400">between fill-ups</span>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Fill-Ups</span>
+          <span id="stat-fill-count" class="text-2xl font-bold text-slate-800">{{ stats.fill_ups_count }}</span>
+          <span class="text-xs text-slate-400">in period</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Financial Metrics ── -->
+    <div>
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Financials</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Spend</span>
+          <span id="stat-total-spend" class="text-2xl font-bold text-slate-800">${{ "%.2f"|format(stats.total_spend) }}</span>
+          <span class="text-xs text-slate-400">in period</span>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Cost / Mile</span>
+          <span id="stat-cost-per-mile" class="text-2xl font-bold text-slate-800">
+            {{ "$%.4f"|format(stats.cost_per_mile) if stats.cost_per_mile else "—" }}
+          </span>
+          <span class="text-xs text-slate-400">per mile driven</span>
+        </div>
+        <div class="col-span-2 sm:col-span-1 bg-white rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Avg Days / Fill-Up</span>
+          <span id="stat-avg-days" class="text-2xl font-bold text-slate-800">
+            {{ "%.1f"|format(stats.avg_days) if stats.avg_days else "—" }}
+          </span>
+          <span class="text-xs text-slate-400">between fill-ups</span>
+        </div>
+      </div>
+    </div>
+
+  </div>{# end metrics-section #}
+
+  <!-- ── Charts — always rendered when has_data; JS shows/hides ── -->
+  <div id="charts-section" class="space-y-4{% if stats.fill_ups_count < 2 %} hidden{% endif %}">
+    <div class="card space-y-2">
+      <h2 class="font-semibold text-slate-700">MPG Trend</h2>
+      <p class="text-xs text-slate-400">Fuel efficiency over time (first fill-up in the period excluded — no prior odometer reading).</p>
+      <div class="relative h-48 sm:h-64">
+        <canvas id="mpgChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card space-y-2">
+      <h2 class="font-semibold text-slate-700">Fuel &amp; Cost Per Fill-Up</h2>
+      <p class="text-xs text-slate-400">Gallons pumped and dollar spend at each fill-up.</p>
+      <div class="relative h-48 sm:h-64">
+        <canvas id="volumeChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  {% endif %} {# end stats #}
+  {% endif %} {# end vehicles #}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if stats and stats.has_data %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  /* ── Embedded data from server ── */
+  const ALL_RECORDS  = {{ stats.fillup_records | tojson }};
+  const TANK_GALLONS = {{ selected_vehicle.fuel_capacity_gallons | tojson }};
+
+  /* ── Chart instances ── */
+  let mpgChartInst = null;
+  let volChartInst = null;
+
+  /* ── Shared chart style ── */
+  Chart.defaults.font.family = 'system-ui, sans-serif';
+  Chart.defaults.font.size   = 12;
+  Chart.defaults.color       = '#64748b';
+  const gridColor = 'rgba(148,163,184,0.15)';
+  const tooltip = {
+    backgroundColor: '#1e293b', titleColor: '#f8fafc', bodyColor: '#cbd5e1',
+    padding: 10, cornerRadius: 8, displayColors: true,
+  };
+
+  /* ── computeStats: mirrors Python _compute_analytics exactly ── */
+  function computeStats(records) {
+    const n = records.length;
+    if (n === 0) return null;
+
+    let totalGallons = 0, totalSpend = 0;
+    const mpgVals = [], dists = [], dayDiffs = [];
+
+    for (let i = 0; i < n; i++) {
+      const r = records[i];
+      totalGallons += r.gallons;
+      totalSpend   += r.gallons * r.price;
+      if (i === 0) continue;
+      const p = records[i - 1];
+      const dist = r.odometer - p.odometer;
+      const dd   = Math.round((new Date(r.date) - new Date(p.date)) / 86400000);
+      if (dd >= 0) dayDiffs.push(dd);
+      if (dist > 0 && r.gallons > 0) { mpgVals.push(dist / r.gallons); dists.push(dist); }
+    }
+
+    const totalMiles   = n > 1 ? records[n - 1].odometer - records[0].odometer : 0;
+    const avgMpg       = mpgVals.length ? mpgVals.reduce((a, b) => a + b) / mpgVals.length : null;
+    const bestMpg      = mpgVals.length ? Math.max(...mpgVals) : null;
+    const worstMpg     = mpgVals.length ? Math.min(...mpgVals) : null;
+    const avgDistance  = dists.length   ? dists.reduce((a, b) => a + b) / dists.length : null;
+    const avgDays      = dayDiffs.length? dayDiffs.reduce((a, b) => a + b) / dayDiffs.length : null;
+    const costPerMile  = totalMiles > 0 ? totalSpend / totalMiles : null;
+    const estimatedRange = (TANK_GALLONS && avgMpg) ? TANK_GALLONS * avgMpg : null;
+
+    return { count: n, totalGallons, totalSpend, totalMiles,
+             avgMpg, bestMpg, worstMpg, avgDistance, avgDays, costPerMile, estimatedRange };
+  }
+
+  /* ── updateDOMMetrics ── */
+  function updateDOMMetrics(stats) {
+    function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+    const dash = '—';
+    const f = (v, d) => (v !== null && v !== undefined) ? v.toFixed(d) : dash;
+
+    if (!stats || stats.count === 0) {
+      ['stat-avg-mpg','stat-best-mpg','stat-worst-mpg','stat-est-range',
+       'stat-total-gallons','stat-total-miles','stat-avg-distance',
+       'stat-total-spend','stat-cost-per-mile','stat-avg-days'].forEach(id => set(id, dash));
+      set('stat-fill-count', '0');
+    } else {
+      set('stat-avg-mpg',       f(stats.avgMpg, 1));
+      set('stat-best-mpg',      f(stats.bestMpg, 1));
+      set('stat-worst-mpg',     f(stats.worstMpg, 1));
+      set('stat-est-range',     stats.estimatedRange !== null ? Math.round(stats.estimatedRange) + ' mi' : dash);
+      set('stat-total-gallons', stats.totalGallons.toFixed(2));
+      set('stat-total-miles',   stats.totalMiles.toLocaleString());
+      set('stat-avg-distance',  stats.avgDistance !== null ? Math.round(stats.avgDistance) + ' mi' : dash);
+      set('stat-fill-count',    stats.count);
+      set('stat-total-spend',   '$' + stats.totalSpend.toFixed(2));
+      set('stat-cost-per-mile', stats.costPerMile !== null ? '$' + stats.costPerMile.toFixed(4) : dash);
+      set('stat-avg-days',      f(stats.avgDays, 1));
+    }
+
+    /* Dynamic MPG color classes */
+    const mpgEl   = document.getElementById('stat-avg-mpg');
+    const bestEl  = document.getElementById('stat-best-mpg');
+    const worstEl = document.getElementById('stat-worst-mpg');
+    if (mpgEl)   mpgEl.className   = 'text-2xl font-bold ' + (stats && stats.avgMpg   !== null ? 'text-green-600'   : 'text-slate-800');
+    if (bestEl)  bestEl.className  = 'text-2xl font-bold ' + (stats && stats.bestMpg  !== null ? 'text-emerald-600' : 'text-slate-800');
+    if (worstEl) worstEl.className = 'text-2xl font-bold ' + (stats && stats.worstMpg !== null ? 'text-orange-500'  : 'text-slate-800');
+  }
+
+  /* ── Chart data builder ── */
+  function buildChartData(records) {
+    const labels = [], mpgData = [], galData = [], costData = [];
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i];
+      labels.push(formatShortDate(r.date)); // "May 24" — formatShortDate defined in base.html
+      galData.push(parseFloat(r.gallons.toFixed(3)));
+      costData.push(parseFloat((r.gallons * r.price).toFixed(2)));
+      if (i === 0) { mpgData.push(null); continue; }
+      const p = records[i - 1];
+      const dist = r.odometer - p.odometer;
+      mpgData.push(dist > 0 && r.gallons > 0 ? parseFloat((dist / r.gallons).toFixed(2)) : null);
+    }
+    return { labels, mpgData, galData, costData };
+  }
+
+  /* ── updateCharts ── */
+  function updateCharts(records) {
+    const section = document.getElementById('charts-section');
+    if (!section) return;
+
+    if (records.length < 2) {
+      section.classList.add('hidden');
+      return;
+    }
+    section.classList.remove('hidden');
+
+    const { labels, mpgData, galData, costData } = buildChartData(records);
+
+    /* MPG chart */
+    if (mpgChartInst) {
+      mpgChartInst.data.labels = labels;
+      mpgChartInst.data.datasets[0].data = mpgData;
+      mpgChartInst.update('none');
+    } else {
+      mpgChartInst = new Chart(document.getElementById('mpgChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'MPG', data: mpgData,
+            borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)',
+            borderWidth: 2.5, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#10b981',
+            tension: 0.35, fill: true, spanGaps: false,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { display: false }, tooltip },
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { maxTicksLimit: 8, maxRotation: 30 } },
+            y: { grid: { color: gridColor }, title: { display: true, text: 'MPG', color: '#94a3b8' }, beginAtZero: false }
+          }
+        }
+      });
+    }
+
+    /* Volume / cost chart */
+    if (volChartInst) {
+      volChartInst.data.labels = labels;
+      volChartInst.data.datasets[0].data = galData;
+      volChartInst.data.datasets[1].data = costData;
+      volChartInst.update('none');
+    } else {
+      volChartInst = new Chart(document.getElementById('volumeChart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Gallons', data: galData,
+              backgroundColor: 'rgba(249,115,22,0.75)', borderColor: '#ea580c',
+              borderWidth: 1, borderRadius: 4, yAxisID: 'yGal',
+            },
+            {
+              label: 'Cost ($)', data: costData, type: 'line',
+              borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.08)',
+              borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 5, pointBackgroundColor: '#3b82f6',
+              tension: 0.35, fill: false, yAxisID: 'yCost',
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } }, tooltip },
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { maxTicksLimit: 8, maxRotation: 30 } },
+            yGal:  { position: 'left',  grid: { color: gridColor }, title: { display: true, text: 'Gallons', color: '#94a3b8' }, beginAtZero: true },
+            yCost: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Cost ($)', color: '#94a3b8' }, beginAtZero: true,
+                     ticks: { callback: v => '$' + v.toFixed(2) } }
+          }
+        }
+      });
+    }
+  }
+
+  /* ── Filter state ── */
+  let activeMode = 'all';
+
+  function getFilteredRecords() {
+    if (activeMode === 'all') return ALL_RECORDS;
+
+    if (activeMode === 'range') {
+      const s = document.getElementById('fi-range-start').value;
+      const e = document.getElementById('fi-range-end').value;
+      if (!s && !e) return ALL_RECORDS;
+      return ALL_RECORDS.filter(r => (!s || r.date >= s) && (!e || r.date <= e));
+    }
+
+    if (activeMode === 'month') {
+      const m = document.getElementById('fi-month').value;   // '01'..'12'
+      const y = document.getElementById('fi-month-year').value;
+      if (!m || !y) return ALL_RECORDS;
+      return ALL_RECORDS.filter(r => r.date.startsWith(y + '-' + m));
+    }
+
+    if (activeMode === 'year') {
+      const y = document.getElementById('fi-year').value;
+      if (!y) return ALL_RECORDS;
+      return ALL_RECORDS.filter(r => r.date.startsWith(y + '-'));
+    }
+
+    return ALL_RECORDS;
+  }
+
+  function applyFilter() {
+    const records = getFilteredRecords();
+    const stats   = computeStats(records);
+
+    const notice  = document.getElementById('filter-notice');
+    const metrics = document.getElementById('metrics-section');
+    const badge   = document.getElementById('filter-active-badge');
+    const banner  = document.getElementById('insufficient-banner');
+
+    if (badge) badge.classList.toggle('hidden', activeMode === 'all');
+
+    if (records.length === 0) {
+      if (notice)  notice.classList.remove('hidden');
+      if (metrics) metrics.classList.add('hidden');
+      if (banner)  banner.classList.add('hidden');
+      updateCharts([]);
+    } else {
+      if (notice)  notice.classList.add('hidden');
+      if (metrics) metrics.classList.remove('hidden');
+      if (banner)  banner.classList.toggle('hidden', records.length >= 2);
+      updateDOMMetrics(stats);
+      updateCharts(records);
+    }
+  }
+
+  /* ── Year select population from real data ── */
+  function populateYearSelects() {
+    const years = [...new Set(ALL_RECORDS.map(r => r.date.substring(0, 4)))].sort().reverse();
+    ['fi-month-year', 'fi-year'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = '';
+      years.forEach(function (y) {
+        const opt = document.createElement('option');
+        opt.value = y; opt.textContent = y;
+        el.appendChild(opt);
+      });
+    });
+
+    /* Default to current year / month */
+    const now  = new Date();
+    const curY = now.getFullYear().toString();
+    const curM = String(now.getMonth() + 1).padStart(2, '0');
+
+    const myEl = document.getElementById('fi-month-year');
+    if (myEl && years.includes(curY)) myEl.value = curY;
+    else if (myEl && years.length) myEl.value = years[0]; // most recent
+
+    const yEl = document.getElementById('fi-year');
+    if (yEl && years.includes(curY)) yEl.value = curY;
+    else if (yEl && years.length) yEl.value = years[0];
+
+    const mEl = document.getElementById('fi-month');
+    if (mEl) mEl.value = curM;
+  }
+
+  /* ── Mode button logic ── */
+  function setMode(mode) {
+    activeMode = mode;
+
+    /* Update button styles */
+    document.querySelectorAll('.analytics-mode-btn').forEach(function (btn) {
+      const isActive = btn.dataset.mode === mode;
+      btn.classList.toggle('bg-slate-800', isActive);
+      btn.classList.toggle('text-white',   isActive);
+      btn.classList.toggle('text-slate-600', !isActive);
+    });
+
+    /* Show/hide input panels */
+    ['range', 'month', 'year'].forEach(function (m) {
+      const el = document.getElementById('filter-inputs-' + m);
+      if (el) el.classList.toggle('hidden', m !== mode);
+    });
+
+    /* Apply immediately for mode switches (except range which uses Apply button) */
+    if (mode !== 'range') applyFilter();
+  }
+
+  /* ── Wire up controls ── */
+  document.querySelectorAll('.analytics-mode-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () { setMode(btn.dataset.mode); });
+  });
+
+  const applyBtn = document.getElementById('fi-range-apply');
+  if (applyBtn) applyBtn.addEventListener('click', applyFilter);
+
+  ['fi-range-start', 'fi-range-end'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', applyFilter);
+  });
+
+  ['fi-month', 'fi-month-year', 'fi-year'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', applyFilter);
+  });
+
+  /* ── Global reset for filter-notice button ── */
+  window.resetAnalyticsFilter = function () { setMode('all'); };
+
+  /* ── Init on page load ── */
+  populateYearSelects();
+  updateCharts(ALL_RECORDS); // Initialize chart instances from full dataset
+
+})();
+</script>
+{% endif %}
+
+<script>
+/* ── Vehicle thumbnail sync ── */
+(function () {
+  const select      = document.getElementById('vehicle_id');
+  const thumb       = document.getElementById('analytics-thumb');
+  const placeholder = document.getElementById('analytics-thumb-placeholder');
+
+  if (!select || !thumb) return;
+
+  function syncThumb() {
+    const opt   = select.options[select.selectedIndex];
+    const photo = opt ? (opt.dataset.photo || '') : '';
+    if (photo) {
+      thumb.src = photo;
+      thumb.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+    } else {
+      thumb.src = '';
+      thumb.classList.add('hidden');
+      placeholder.classList.remove('hidden');
+    }
+  }
+
+  select.addEventListener('change', syncThumb);
+  syncThumb();
+})();
+</script>
+{% endblock %}
