@@ -9,6 +9,16 @@ All notable changes to FuelTrack are documented here.
 
 ---
 
+## [1.2.0] — 2026-05-25
+
+- Fill-Up History: row-limit selector (5 / 10 / 15 / Max=25), default 10
+- Fill-Up History: pagination controls (Previous / Page X of Y / Next)
+- Pagination resets to page 1 on any filter change or row-limit change
+- Previous disabled on first page; Next disabled on last page
+- Pagination, filter, and row edit/delete all work together correctly
+
+---
+
 ## [1.1.1] — 2026-05-25
 
 - Dashboard recent fill-ups limited to 5 entries (was 10)

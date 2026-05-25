@@ -124,6 +124,21 @@
         Reset
       </button>
 
+      <!-- Thin rule (desktop only) -->
+      <div class="hidden sm:block w-px h-6 bg-slate-200 shrink-0"></div>
+
+      <!-- Rows per page -->
+      <div class="flex items-center gap-1.5 shrink-0">
+        <span class="text-xs text-slate-400 font-medium hidden sm:inline whitespace-nowrap">Rows:</span>
+        <div class="flex rounded-lg border border-slate-200 overflow-hidden text-xs font-medium divide-x divide-slate-200"
+             role="group" aria-label="Rows per page">
+          <button class="rows-limit-btn px-2.5 py-2 text-slate-500 hover:bg-slate-50 transition-colors" data-limit="5">5</button>
+          <button class="rows-limit-btn px-2.5 py-2 text-slate-500 hover:bg-slate-50 transition-colors" data-limit="10">10</button>
+          <button class="rows-limit-btn px-2.5 py-2 text-slate-500 hover:bg-slate-50 transition-colors" data-limit="15">15</button>
+          <button class="rows-limit-btn px-2.5 py-2 text-slate-500 hover:bg-slate-50 transition-colors" data-limit="25">Max</button>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -430,6 +445,28 @@
     </table>
   </div><!-- /desktop table -->
 
+  <!-- ── Pagination bar (shared mobile + desktop) ───────────────────────── -->
+  <div id="pagination-bar"
+       class="flex items-center justify-between gap-3 bg-white rounded-xl border border-slate-200 px-4 py-2.5 mt-2">
+    <button id="pg-prev"
+            class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors
+                   text-slate-600 hover:bg-slate-100 disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:bg-transparent">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+      </svg>
+      Previous
+    </button>
+    <span id="pg-indicator" class="text-xs font-medium text-slate-500 tabular-nums">Page 1 of 1</span>
+    <button id="pg-next"
+            class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors
+                   text-slate-600 hover:bg-slate-100 disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:bg-transparent">
+      Next
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+      </svg>
+    </button>
+  </div>
+
   {% endif %}
 </div>
 {% endblock %}
@@ -532,12 +569,10 @@
       const mpgSpan = r.querySelector('[data-cell="mpg"] [data-v]');
       mpgSpan.textContent = f.mpg_display;
       mpgSpan.className   = f.mpg ? 'font-medium text-green-600' : 'font-medium text-slate-400';
-      // Refresh inputs
       r.querySelector('[data-field="date"]').value     = f.date;
       r.querySelector('[data-field="odometer"]').value = f.odometer_reading;
       r.querySelector('[data-field="gallons"]').value  = f.gallons_pumped;
       r.querySelector('[data-field="price"]').value    = f.price_per_gallon > 0 ? f.price_per_gallon : '';
-      // Also update the data-date attribute so the filter still works correctly
       r.dataset.date = f.date;
     }
     const c = card(id);
@@ -574,11 +609,10 @@
     setTimeout(() => {
       [row(id), card(id)].filter(Boolean).forEach(el => el.remove());
       decrementTotal();
-      filterRecords(); // re-evaluate count + empty state
+      filterRecords();
     }, 270);
   }
 
-  /** Decrement the stored total (not the displayed count — filter owns that). */
   function decrementTotal() {
     const el = document.getElementById('fillup-count');
     if (el) {
@@ -599,10 +633,9 @@
     });
   }
 
-  const checkSvg   = `<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
-  const trashSvg   = `<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
+  const checkSvg = `<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
+  const trashSvg = `<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
 
-  // ── Public edit/delete API ──────────────────────────────────────────────
   window.handleEditRow      = id => setMode(id, 'edit');
   window.handleCancelRow    = id => setMode(id, 'view');
   window.handleDeleteRow    = id => setMode(id, 'confirm');
@@ -631,7 +664,7 @@
     applyUpdate(id, result.fillup);
     setMode(id, 'view');
     flashSuccess(id);
-    filterRecords(); // date may have changed — re-evaluate visibility
+    filterRecords();
   };
 
   window.handleDeleteConfirm = async function (id) {
@@ -658,22 +691,51 @@
 
 
   /* ═══════════════════════════════════════════════════════════════════════
-     ▌ SECTION 2 — FILTER BAR
+     ▌ SECTION 2 — FILTER + PAGINATION
   ═══════════════════════════════════════════════════════════════════════ */
 
   // ── DOM refs ──────────────────────────────────────────────────────────
-  const fltVehicle    = document.getElementById('flt-vehicle');
-  const fltReset      = document.getElementById('flt-reset');
-  const dateValWrap   = document.getElementById('date-val-wrap');
-  const fdDate        = document.getElementById('fd-date');
-  const fdMonth       = document.getElementById('fd-month');
-  const fdYear        = document.getElementById('fd-year');
-  const countEl       = document.getElementById('fillup-count');
-  const countLabelEl  = document.getElementById('fillup-count-label');
-  const desktopEmpty  = document.getElementById('desktop-empty-row');
-  const mobileEmpty   = document.getElementById('mobile-empty-state');
+  const fltVehicle   = document.getElementById('flt-vehicle');
+  const fltReset     = document.getElementById('flt-reset');
+  const dateValWrap  = document.getElementById('date-val-wrap');
+  const fdDate       = document.getElementById('fd-date');
+  const fdMonth      = document.getElementById('fd-month');
+  const fdYear       = document.getElementById('fd-year');
+  const countEl      = document.getElementById('fillup-count');
+  const countLabelEl = document.getElementById('fillup-count-label');
+  const desktopEmpty = document.getElementById('desktop-empty-row');
+  const mobileEmpty  = document.getElementById('mobile-empty-state');
+  const pgPrev       = document.getElementById('pg-prev');
+  const pgNext       = document.getElementById('pg-next');
+  const pgIndicator  = document.getElementById('pg-indicator');
+  const pgBar        = document.getElementById('pagination-bar');
 
-  let currentDateType = ''; // '', 'date', 'month', 'year'
+  // ── Pagination state ──────────────────────────────────────────────────
+  let currentDateType = '';
+  let currentPage     = 1;
+  let rowsPerPage     = 10; // default
+
+  // ── Row limit buttons ─────────────────────────────────────────────────
+  document.querySelectorAll('.rows-limit-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      rowsPerPage = parseInt(this.dataset.limit, 10);
+      currentPage = 1;
+      document.querySelectorAll('.rows-limit-btn').forEach(b => {
+        const active = b === this;
+        b.classList.toggle('bg-fuel-500', active);
+        b.classList.toggle('text-white',  active);
+        b.classList.toggle('text-slate-500', !active);
+      });
+      filterRecords();
+    });
+  });
+
+  // Activate the default (10) on load
+  const defaultLimitBtn = document.querySelector('.rows-limit-btn[data-limit="10"]');
+  if (defaultLimitBtn) {
+    defaultLimitBtn.classList.add('bg-fuel-500', 'text-white');
+    defaultLimitBtn.classList.remove('text-slate-500');
+  }
 
   // ── Segmented date-type buttons ───────────────────────────────────────
   document.querySelectorAll('.date-type-btn').forEach(btn => {
@@ -681,43 +743,36 @@
       const type     = this.dataset.type;
       const isActive = this.classList.contains('is-active');
 
-      // Clear all active states
       document.querySelectorAll('.date-type-btn').forEach(b => {
         b.classList.remove('is-active', 'bg-fuel-500', 'text-white');
         b.classList.add('text-slate-500');
       });
 
       if (isActive) {
-        // Toggle off → back to "All Time"
         currentDateType = '';
       } else {
-        // Activate this button
         this.classList.add('is-active', 'bg-fuel-500', 'text-white');
         this.classList.remove('text-slate-500');
         currentDateType = type;
       }
 
+      currentPage = 1;
       syncDateInput();
       filterRecords();
     });
   });
 
-  /** Show the correct date input for the current type, hide others. */
   function syncDateInput() {
     const show = currentDateType !== '';
     dateValWrap.classList.toggle('hidden', !show);
-
     fdDate.classList.toggle('hidden',  currentDateType !== 'date');
     fdMonth.classList.toggle('hidden', currentDateType !== 'month');
     fdYear.classList.toggle('hidden',  currentDateType !== 'year');
-
-    // Clear the inactive inputs so stale values don't leak into filter logic
     if (currentDateType !== 'date')  fdDate.value  = '';
     if (currentDateType !== 'month') fdMonth.value = '';
     if (currentDateType !== 'year')  fdYear.value  = '';
   }
 
-  /** Read the currently relevant date value. */
   function getDateValue() {
     if (currentDateType === 'date')  return fdDate.value;
     if (currentDateType === 'month') return fdMonth.value;
@@ -725,26 +780,24 @@
     return '';
   }
 
-  // ── Core filter function ──────────────────────────────────────────────
+  // ── Core filter + paginate ────────────────────────────────────────────
   function filterRecords() {
-    const vehicleFilter = fltVehicle?.value   || '';
+    const vehicleFilter = fltVehicle?.value || '';
     const dateVal       = getDateValue();
     const isFiltered    = !!(vehicleFilter || (currentDateType && dateVal));
 
-    // Show/hide reset button
-    if (fltReset) fltReset.classList.toggle('hidden', !isFiltered);
-    if (fltReset) fltReset.style.display = isFiltered ? 'inline-flex' : '';
+    // Reset button visibility
+    if (fltReset) {
+      fltReset.classList.toggle('hidden', !isFiltered);
+      fltReset.style.display = isFiltered ? 'inline-flex' : '';
+    }
 
-    let visibleCount = 0;
-    const rows = document.querySelectorAll('#desktop-tbody tr[data-id]');
+    // All data rows in the desktop tbody
+    const allRows = Array.from(document.querySelectorAll('#desktop-tbody tr[data-id]'));
 
-    rows.forEach(tr => {
-      const id = tr.dataset.id;
-
-      // Vehicle check
+    // 1. Filter: which rows pass?
+    const matching = allRows.filter(tr => {
       const vehicleMatch = !vehicleFilter || tr.dataset.vehicle === vehicleFilter;
-
-      // Date check
       let dateMatch = true;
       if (currentDateType && dateVal) {
         const d = tr.dataset.date || '';
@@ -752,23 +805,42 @@
         else if (currentDateType === 'month') dateMatch = d.slice(0, 7) === dateVal;
         else if (currentDateType === 'year')  dateMatch = d.slice(0, 4) === dateVal;
       }
-
-      const show = vehicleMatch && dateMatch;
-      tr.classList.toggle('hidden', !show);
-
-      const c = card(id);
-      if (c) c.classList.toggle('hidden', !show);
-
-      if (show) visibleCount++;
+      return vehicleMatch && dateMatch;
     });
 
-    // Update subtitle
-    updateSubtitle(visibleCount, isFiltered);
+    // 2. Paginate: clamp page, slice
+    const totalPages = Math.max(1, Math.ceil(matching.length / rowsPerPage));
+    currentPage = Math.min(Math.max(1, currentPage), totalPages);
 
-    // Empty state
-    const isEmpty = visibleCount === 0;
+    const start   = (currentPage - 1) * rowsPerPage;
+    const pageIds = new Set(matching.slice(start, start + rowsPerPage).map(tr => tr.dataset.id));
+
+    // 3. Show/hide each row and its matching mobile card
+    allRows.forEach(tr => {
+      const show = pageIds.has(tr.dataset.id);
+      tr.classList.toggle('hidden', !show);
+      const c = card(tr.dataset.id);
+      if (c) c.classList.toggle('hidden', !show);
+    });
+
+    // 4. Empty state
+    const isEmpty = matching.length === 0;
     if (desktopEmpty) desktopEmpty.classList.toggle('hidden', !isEmpty);
     if (mobileEmpty)  mobileEmpty.classList.toggle('hidden',  !isEmpty);
+
+    // 5. Subtitle
+    updateSubtitle(matching.length, isFiltered);
+
+    // 6. Pagination controls
+    updatePagination(matching.length, totalPages);
+  }
+
+  function updatePagination(total, totalPages) {
+    if (pgIndicator) pgIndicator.textContent = `Page ${currentPage} of ${totalPages}`;
+    if (pgPrev) pgPrev.disabled = currentPage <= 1;
+    if (pgNext) pgNext.disabled = currentPage >= totalPages;
+    // Hide bar when there's nothing (empty state handles that UI)
+    if (pgBar) pgBar.classList.toggle('hidden', total === 0);
   }
 
   function updateSubtitle(visible, isFiltered) {
@@ -783,24 +855,27 @@
     }
   }
 
-  /** Reset all filters and restore the full list. */
   window.resetFilters = function () {
     if (fltVehicle) fltVehicle.value = '';
-
     document.querySelectorAll('.date-type-btn').forEach(b => {
       b.classList.remove('is-active', 'bg-fuel-500', 'text-white');
       b.classList.add('text-slate-500');
     });
     currentDateType = '';
+    currentPage     = 1;
     syncDateInput();
     filterRecords();
   };
 
-  // ── Event wiring ──────────────────────────────────────────────────────
-  fltVehicle?.addEventListener('change', filterRecords);
-  fdDate?.addEventListener('change',  filterRecords);
-  fdMonth?.addEventListener('change', filterRecords);
-  fdYear?.addEventListener('change',  filterRecords);
+  // ── Pagination button handlers ────────────────────────────────────────
+  pgPrev?.addEventListener('click', () => { if (currentPage > 1) { currentPage--; filterRecords(); } });
+  pgNext?.addEventListener('click', () => { currentPage++; filterRecords(); });
+
+  // ── Filter event wiring (reset to page 1 on any filter change) ────────
+  fltVehicle?.addEventListener('change', () => { currentPage = 1; filterRecords(); });
+  fdDate?.addEventListener('change',     () => { currentPage = 1; filterRecords(); });
+  fdMonth?.addEventListener('change',    () => { currentPage = 1; filterRecords(); });
+  fdYear?.addEventListener('change',     () => { currentPage = 1; filterRecords(); });
 
   // ── Initialise ────────────────────────────────────────────────────────
   syncDateInput();
@@ -813,7 +888,7 @@
      max-height is constrained so it fills the remaining viewport and
      scrolls independently with the thead pinned at top-0 within it.
   ═══════════════════════════════════════════════════════════════════════ */
-  const NAV_H       = 56; // nav is h-14 = 56 px, sticky top-0
+  const NAV_H       = 56;
   const pgHeaderEl  = document.getElementById('sticky-pg-header');
   const filterEl2   = document.getElementById('sticky-filter');
   const tableWrapEl = document.getElementById('desktop-table-wrapper');
@@ -822,24 +897,19 @@
     if (!pgHeaderEl) return;
     const pgH     = pgHeaderEl.offsetHeight;
     const filterH = filterEl2 ? filterEl2.offsetHeight : 0;
+    const pgBarH  = pgBar     ? pgBar.offsetHeight + 8  : 48; // mt-2 = 8px
 
-    // Stack the filter sticky div directly below the page-header sticky div.
     if (filterEl2) {
       filterEl2.style.top = (NAV_H + pgH) + 'px';
     }
 
-    // Give the desktop table wrapper a max-height so it fills the rest of
-    // the viewport and scrolls on its own; thead is sticky at top-0 within
-    // this scroll container.
     if (tableWrapEl) {
-      const usedPx = NAV_H + pgH + filterH + 8 /* mt-2 */ + 24 /* bottom breathe */;
+      const usedPx = NAV_H + pgH + filterH + 8 /* mt-2 */ + pgBarH + 24 /* breathe */;
       tableWrapEl.style.maxHeight = 'calc(100vh - ' + usedPx + 'px)';
     }
   }
 
-  // Recalculate whenever either sticky element changes size (e.g. filter
-  // expands when a date type is selected, or window resizes).
-  [pgHeaderEl, filterEl2].forEach(function (el) {
+  [pgHeaderEl, filterEl2, pgBar].forEach(function (el) {
     if (el && window.ResizeObserver) {
       new ResizeObserver(updateStickyLayout).observe(el);
     }
