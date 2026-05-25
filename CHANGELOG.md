@@ -9,6 +9,12 @@ All notable changes to FuelTrack are documented here.
 
 ---
 
+## [1.2.1] — 2026-05-25
+
+- Login page: replaced SVG outline icon with the full app icon (fueltracker-192.png)
+
+---
+
 ## [1.2.0] — 2026-05-25
 
 - Fill-Up History: row-limit selector (5 / 10 / 15 / Max=25), default 10
