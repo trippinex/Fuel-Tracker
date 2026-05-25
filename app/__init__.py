@@ -6,6 +6,7 @@ from flask_wtf.csrf import CSRFProtect
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .database import db
+from .version import __version__
 
 csrf = CSRFProtect()
 
@@ -97,6 +98,11 @@ def create_app():
     analytics_cache.init_app(app)
 
     init_oauth(app)
+
+    # ── Template context — version available in every template ────────────
+    @app.context_processor
+    def inject_version():
+        return {'app_version': __version__}
 
     # ── HTTP security headers ─────────────────────────────────────────────
     @app.after_request

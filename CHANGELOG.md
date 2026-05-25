@@ -1,11 +1,26 @@
 # Changelog
 
-All notable changes to FuelTrack are documented here.  
-Format: `[YYYY-MM-DD] — Summary` followed by a bullet list of changes.
+All notable changes to FuelTrack are documented here.
+
+**Versioning scheme:**
+- **Patch (1.0.X)** — bug fixes, small tweaks, security patches
+- **Minor (1.X.0)** — new features, meaningful additions
+- **Major (X.0.0)** — breaking changes, major redesigns
 
 ---
 
-## [2026-05-25] — Initial GitHub release
+## [1.1.0] — 2026-05-25
+
+- Added semantic versioning (`app/version.py`) as single source of truth
+- Version badge (e.g. `v1.1.0`) now displayed in the Settings page
+- Settings page includes a direct link to this changelog
+- Added `CHANGELOG.md` to track changes per deployment
+- Added `.gitattributes` to normalize line endings to LF across all platforms
+- Source code published to GitHub: https://github.com/trippinex/Fuel-Tracker
+
+---
+
+## [1.0.0] — 2026-05-25 — Initial release
 
 - Flask + SQLite fuel fill-up tracker, live at https://fueltracker.soccerwrek.net/
 - Vehicle management with photo upload
