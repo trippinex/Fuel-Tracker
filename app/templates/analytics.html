@@ -591,6 +591,16 @@
       if (el) el.classList.toggle('hidden', m !== mode);
     });
 
+    /* When entering Date Range mode, pre-fill any empty From / To with today's
+       local date so the user sees sensible defaults instead of blank inputs. */
+    if (mode === 'range') {
+      const today = getLocalDateString();  // defined in base.html
+      const s = document.getElementById('fi-range-start');
+      const e = document.getElementById('fi-range-end');
+      if (s && !s.value) s.value = today;
+      if (e && !e.value) e.value = today;
+    }
+
     /* Apply immediately for mode switches (except range which uses Apply button) */
     if (mode !== 'range') applyFilter();
   }

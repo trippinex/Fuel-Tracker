@@ -9,6 +9,12 @@ All notable changes to FuelTrack are documented here.
 
 ---
 
+## [1.4.4] — 2026-05-25
+
+- Analytics: Date Range filter now defaults empty From / To inputs to today's local date when the user selects Date Range mode
+
+---
+
 ## [1.4.3] — 2026-05-25
 
 - Analytics page: fix Select Vehicle dropdown sitting at right edge on mobile. Root cause: form had `items-end` which on mobile column layout aligns children to the right cross-axis edge. Restricted to `sm:items-end` so mobile children stretch full-width.
