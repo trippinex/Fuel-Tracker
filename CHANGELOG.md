@@ -9,6 +9,20 @@ All notable changes to FuelTrack are documented here.
 
 ---
 
+## [1.4.0] — 2026-05-25 — Tailwind CSS production build
+
+- Replaced Tailwind Play CDN with a pre-built, minified CSS file (~33 KB vs ~300 KB JS download per page)
+- Eliminates the in-browser JIT compiler — no more flash of unstyled content on slow connections
+- No more "do not use Play CDN in production" warning in the console
+- Tightened CSP: removed `https://cdn.tailwindcss.com` from `script-src` and `style-src`
+- Build pipeline:
+  - `package.json` + `tailwind.config.js` with brand `fuel` colours and content scan paths
+  - `app/static/css/tailwind.input.css` holds custom component classes (`.card`, `.btn-primary`, etc.)
+  - `build_css.ps1` script rebuilds the CSS; output is committed so production needs no Node
+- Updated `.gitignore` to skip `node_modules/` and `package-lock.json` (we commit the built CSS, not the build inputs)
+
+---
+
 ## [1.3.0] — 2026-05-25 — Codebase optimization
 
 **Security**

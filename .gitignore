@@ -51,6 +51,12 @@ htmlcov/
 Thumbs.db
 desktop.ini
 
+# ── Node / Tailwind build tooling ─────────────────────────────────────────────
+node_modules/
+package-lock.json
+# (We intentionally COMMIT the built app/static/css/tailwind.css so the GCP VM
+#  doesn't need Node installed.)
+
 # ── Claude Code local config ──────────────────────────────────────────────────
 .claude/
 

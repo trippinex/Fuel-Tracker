@@ -126,9 +126,8 @@ def create_app():
             )
         csp = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' "
-            "https://cdn.tailwindcss.com https://cdn.jsdelivr.net; "
-            "style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data: https://lh3.googleusercontent.com; "
             "font-src 'self'; "
             "connect-src 'self'; "
