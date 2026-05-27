@@ -13,6 +13,17 @@
   input[type=number]::-webkit-outer-spin-button,
   input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   input[type=number] { -moz-appearance: textfield; }
+
+  /* iOS Safari gives date / time inputs an intrinsic min-width that
+     overflows narrow containers. Force them to respect their parent. */
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="week"] {
+    min-width: 0;
+    max-width: 100%;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────────────

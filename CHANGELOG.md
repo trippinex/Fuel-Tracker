@@ -9,6 +9,12 @@ All notable changes to FuelTrack are documented here.
 
 ---
 
+## [1.4.1] — 2026-05-25
+
+- Fix: date inputs no longer overflow narrow containers on iOS Safari (Log Fill-Up screen, edit forms). Applies `min-width: 0; max-width: 100%` to all date / time input types.
+
+---
+
 ## [1.4.0] — 2026-05-25 — Tailwind CSS production build
 
 - Replaced Tailwind Play CDN with a pre-built, minified CSS file (~33 KB vs ~300 KB JS download per page)
