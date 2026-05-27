@@ -14,16 +14,26 @@
   input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   input[type=number] { -moz-appearance: textfield; }
 
-  /* iOS Safari gives date / time inputs an intrinsic min-width that
-     overflows narrow containers. Force them to respect their parent. */
+  /* iOS Safari renders date / time inputs as native widgets with an
+     intrinsic width that overflows narrow containers. -webkit-appearance:none
+     disables that native rendering so the input honours its CSS width. */
   input[type="date"],
   input[type="time"],
   input[type="datetime-local"],
   input[type="month"],
   input[type="week"] {
+    -webkit-appearance: none;
+    appearance: none;
     min-width: 0;
     max-width: 100%;
+    width: 100%;
+    display: block;
+    box-sizing: border-box;
   }
+  /* Stop the native date-picker indicator (small arrow) from blowing
+     out the input's intrinsic width on iOS. */
+  input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+  input[type="date"]::-webkit-calendar-picker-indicator { padding: 0; margin-left: 4px; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────

@@ -42,7 +42,7 @@
 
   <!-- Vehicle selector + filter bar -->
   <div class="card">
-    <form method="GET" action="{{ url_for('analytics.analytics') }}" class="flex flex-col sm:flex-row gap-3 items-end">
+    <form method="GET" action="{{ url_for('analytics.analytics') }}" class="flex flex-col sm:flex-row gap-3 sm:items-end">
       <div class="flex-1">
         <label for="vehicle_id" class="form-label">Select Vehicle</label>
         <select id="vehicle_id" name="vehicle_id" class="form-select" onchange="this.form.submit()">

@@ -17,8 +17,9 @@
   <!-- Browser chrome / Android task-switcher accent colour -->
   <meta name="theme-color" content="#1e293b" />
 
-  <!-- Pre-built Tailwind CSS — rebuild with `npm run build:css` after class changes -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}" />
+  <!-- Pre-built Tailwind CSS — rebuild with `npm run build:css` after class changes.
+       ?v=app_version is a cache-buster so clients pick up CSS changes on each deploy. -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}?v={{ app_version }}" />
 </head>
 <body class="h-full bg-slate-50 text-slate-800 antialiased">
 

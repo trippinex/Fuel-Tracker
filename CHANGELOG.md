@@ -9,6 +9,19 @@ All notable changes to FuelTrack are documented here.
 
 ---
 
+## [1.4.3] — 2026-05-25
+
+- Analytics page: fix Select Vehicle dropdown sitting at right edge on mobile. Root cause: form had `items-end` which on mobile column layout aligns children to the right cross-axis edge. Restricted to `sm:items-end` so mobile children stretch full-width.
+
+---
+
+## [1.4.2] — 2026-05-25
+
+- Date input overflow fix (continued): added `-webkit-appearance: none` to disable iOS Safari's native widget rendering, so the input respects `width: 100%`
+- Added `?v={app_version}` cache-buster to the Tailwind CSS link so browsers and the installed PWA pick up CSS changes immediately after each deploy
+
+---
+
 ## [1.4.1] — 2026-05-25
 
 - Fix: date inputs no longer overflow narrow containers on iOS Safari (Log Fill-Up screen, edit forms). Applies `min-width: 0; max-width: 100%` to all date / time input types.
