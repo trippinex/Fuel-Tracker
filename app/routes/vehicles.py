@@ -1,13 +1,13 @@
-import imghdr
 import os
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, abort, current_app
+from flask import (Blueprint, render_template, request, redirect, url_for,
+                   flash, send_from_directory, abort, current_app)
 from flask_login import login_required, current_user
 
 from ..models import Vehicle
 from ..database import db
-
-ALLOWED_PHOTO_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}
+from ..services.photos import validate_photo
+from ..services.ownership import get_owned_vehicle
 
 vehicles_bp = Blueprint('vehicles', __name__)
 
@@ -15,7 +15,10 @@ vehicles_bp = Blueprint('vehicles', __name__)
 @vehicles_bp.route('/')
 @login_required
 def list_vehicles():
-    vehicles = Vehicle.query.filter_by(user_id=current_user.id).order_by(Vehicle.year.desc(), Vehicle.name).all()
+    vehicles = (Vehicle.query
+                .filter_by(user_id=current_user.id)
+                .order_by(Vehicle.year.desc(), Vehicle.name)
+                .all())
     return render_template('vehicles.html', vehicles=vehicles)
 
 
@@ -54,29 +57,9 @@ def add_vehicle():
             capacity = None
 
         # Validate photo if provided
-        photo_file = request.files.get('photo')
-        photo_ext = None
-        if photo_file and photo_file.filename:
-            # 1. Size cap (5 MB)
-            photo_file.seek(0, 2)
-            photo_size = photo_file.tell()
-            photo_file.seek(0)
-            if photo_size > 5 * 1024 * 1024:
-                errors.append('Photo must be smaller than 5 MB.')
-            else:
-                # 2. Extension check
-                photo_ext = os.path.splitext(photo_file.filename)[1].lower()
-                if photo_ext not in ALLOWED_PHOTO_EXTENSIONS:
-                    errors.append('Photo must be a JPG, PNG, or WebP image.')
-                    photo_ext = None
-                else:
-                    # 3. MIME check (imghdr reads magic bytes, not the filename)
-                    header = photo_file.read(512)
-                    photo_file.seek(0)
-                    detected = imghdr.what(None, h=header)
-                    if detected not in ('jpeg', 'png', 'webp'):
-                        errors.append('Photo content does not match a supported image type.')
-                        photo_ext = None
+        photo_ext, photo_err = validate_photo(request.files.get('photo'))
+        if photo_err:
+            errors.append(photo_err)
 
         if errors:
             for error in errors:
@@ -100,7 +83,7 @@ def add_vehicle():
         if photo_ext:
             photos_dir = current_app.config['PHOTOS_PATH']
             filename = f'vehicle_{vehicle.id}{photo_ext}'
-            photo_file.save(os.path.join(photos_dir, filename))
+            request.files['photo'].save(os.path.join(photos_dir, filename))
             vehicle.photo_filename = filename
             db.session.commit()
 
@@ -113,8 +96,8 @@ def add_vehicle():
 @vehicles_bp.route('/<int:vehicle_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_vehicle(vehicle_id):
-    vehicle = db.session.get(Vehicle, vehicle_id)
-    if not vehicle or vehicle.user_id != current_user.id:
+    vehicle = get_owned_vehicle(vehicle_id)
+    if not vehicle:
         flash('Vehicle not found.', 'error')
         return redirect(url_for('vehicles.list_vehicles'))
 
@@ -127,30 +110,12 @@ def edit_vehicle(vehicle_id):
         vin = request.form.get('vin', '').strip().upper() or None
         license_plate = request.form.get('license_plate', '').strip().upper() or None
         remove_photo = request.form.get('remove_photo', '')
+
         errors = []
-        photo_file = request.files.get('photo')
-        photo_ext = None
-        if photo_file and photo_file.filename:
-            # 1. Size cap (5 MB)
-            photo_file.seek(0, 2)
-            photo_size = photo_file.tell()
-            photo_file.seek(0)
-            if photo_size > 5 * 1024 * 1024:
-                errors.append('Photo must be smaller than 5 MB.')
-            else:
-                # 2. Extension check
-                photo_ext = os.path.splitext(photo_file.filename)[1].lower()
-                if photo_ext not in ALLOWED_PHOTO_EXTENSIONS:
-                    errors.append('Photo must be a JPG, PNG, or WebP image.')
-                    photo_ext = None
-                else:
-                    # 3. MIME check
-                    header = photo_file.read(512)
-                    photo_file.seek(0)
-                    detected = imghdr.what(None, h=header)
-                    if detected not in ('jpeg', 'png', 'webp'):
-                        errors.append('Photo content does not match a supported image type.')
-                        photo_ext = None
+        photo_ext, photo_err = validate_photo(request.files.get('photo'))
+        if photo_err:
+            errors.append(photo_err)
+
         if not name:
             errors.append('Vehicle name is required.')
         if not make:
@@ -194,7 +159,7 @@ def edit_vehicle(vehicle_id):
             vehicle.photo_filename = None
         if photo_ext:
             filename = f'vehicle_{vehicle.id}{photo_ext}'
-            photo_file.save(os.path.join(photos_dir, filename))
+            request.files['photo'].save(os.path.join(photos_dir, filename))
             vehicle.photo_filename = filename
 
         db.session.commit()
@@ -230,34 +195,19 @@ def vehicle_photo(filename):
 @vehicles_bp.route('/<int:vehicle_id>/photo', methods=['POST'])
 @login_required
 def upload_photo(vehicle_id):
-    vehicle = db.session.get(Vehicle, vehicle_id)
-    if not vehicle or vehicle.user_id != current_user.id:
+    vehicle = get_owned_vehicle(vehicle_id)
+    if not vehicle:
         flash('Vehicle not found.', 'error')
         return redirect(url_for('vehicles.list_vehicles'))
 
     file = request.files.get('photo')
-    if not file or file.filename == '':
+    if not file or not file.filename:
         flash('No file selected.', 'error')
         return redirect(url_for('vehicles.list_vehicles'))
 
-    # 1. Size cap (5 MB)
-    file.seek(0, 2)
-    if file.tell() > 5 * 1024 * 1024:
-        flash('Photo must be smaller than 5 MB.', 'error')
-        return redirect(url_for('vehicles.list_vehicles'))
-    file.seek(0)
-
-    # 2. Extension check
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in ALLOWED_PHOTO_EXTENSIONS:
-        flash('Please upload a JPG, PNG, or WebP image.', 'error')
-        return redirect(url_for('vehicles.list_vehicles'))
-
-    # 3. MIME check
-    header = file.read(512)
-    file.seek(0)
-    if imghdr.what(None, h=header) not in ('jpeg', 'png', 'webp'):
-        flash('Photo content does not match a supported image type.', 'error')
+    ext, err = validate_photo(file)
+    if err:
+        flash(err, 'error')
         return redirect(url_for('vehicles.list_vehicles'))
 
     photos_dir = current_app.config['PHOTOS_PATH']
@@ -279,8 +229,8 @@ def upload_photo(vehicle_id):
 @vehicles_bp.route('/<int:vehicle_id>/photo/delete', methods=['POST'])
 @login_required
 def delete_photo(vehicle_id):
-    vehicle = db.session.get(Vehicle, vehicle_id)
-    if not vehicle or vehicle.user_id != current_user.id:
+    vehicle = get_owned_vehicle(vehicle_id)
+    if not vehicle:
         flash('Vehicle not found.', 'error')
         return redirect(url_for('vehicles.list_vehicles'))
 
@@ -298,8 +248,8 @@ def delete_photo(vehicle_id):
 @vehicles_bp.route('/<int:vehicle_id>/delete', methods=['POST'])
 @login_required
 def delete_vehicle(vehicle_id):
-    vehicle = db.session.get(Vehicle, vehicle_id)
-    if not vehicle or vehicle.user_id != current_user.id:
+    vehicle = get_owned_vehicle(vehicle_id)
+    if not vehicle:
         flash('Vehicle not found.', 'error')
         return redirect(url_for('vehicles.list_vehicles'))
     name = vehicle.name

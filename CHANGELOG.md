@@ -9,6 +9,29 @@ All notable changes to FuelTrack are documented here.
 
 ---
 
+## [1.3.0] — 2026-05-25 — Codebase optimization
+
+**Security**
+- Session cookies hardened: `Secure` (HTTPS-only), `HttpOnly` (no JS access), `SameSite=Lax` (CSRF defense)
+
+**Maintainability — shared service modules**
+- `app/services/mpg.py` — single source of truth for MPG / fleet-MPG calculation (was duplicated 3× across main, fillups, analytics)
+- `app/services/photos.py` — single source of truth for photo upload validation (was duplicated 3× in vehicles routes)
+- `app/services/ownership.py` — `get_owned_vehicle()` helper used across all routes for consistent authorization
+- `app/templates/_icons.html` — reusable Jinja macros for common SVG icons
+
+**Frontend**
+- Extracted ~440 lines of inline JavaScript from `fillups_history.html` into `app/static/js/fillups_history.js` (faster page loads, browser-cacheable, easier to debug)
+
+**Performance**
+- Dashboard: replaced 3 aggregate SQL queries with in-memory sums over already-loaded data
+
+**Future-proofing**
+- Replaced deprecated `imghdr` (removed in Python 3.13) with inline magic-byte detector — no new dependency
+- Replaced deprecated `datetime.utcnow()` with timezone-aware `datetime.now(timezone.utc)`
+
+---
+
 ## [1.2.1] — 2026-05-25
 
 - Login page: replaced SVG outline icon with the full app icon (fueltracker-192.png)

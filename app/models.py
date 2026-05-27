@@ -1,8 +1,13 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask_login import UserMixin
 
 from .database import db
+
+
+def _utc_now():
+    """Timezone-aware UTC now. Replaces deprecated datetime.utcnow()."""
+    return datetime.now(timezone.utc)
 
 
 class User(db.Model, UserMixin):
@@ -13,7 +18,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(200), unique=True, nullable=False)
     name = db.Column(db.String(200))
     picture = db.Column(db.String(500))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=_utc_now)
 
     vehicles = db.relationship('Vehicle', backref='user', lazy=True)
 

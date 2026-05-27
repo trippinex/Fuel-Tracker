@@ -29,6 +29,15 @@ def create_app():
     app.config['GOOGLE_CLIENT_ID'] = os.environ.get('GOOGLE_CLIENT_ID', '')
     app.config['GOOGLE_CLIENT_SECRET'] = os.environ.get('GOOGLE_CLIENT_SECRET', '')
 
+    # ── Session cookie security ──────────────────────────────────────────
+    # SECURE   — only sent over HTTPS (production has TLS via nginx).
+    # HTTPONLY — not readable from JavaScript, mitigating XSS cookie theft.
+    # SAMESITE — 'Lax' blocks CSRF on most cross-site requests while still
+    #            allowing top-level navigation (required for OAuth redirect).
+    app.config['SESSION_COOKIE_SECURE']   = not app.debug
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
     photos_path = os.environ.get('PHOTOS_PATH', '/var/lib/fueltrack/photos')
     os.makedirs(photos_path, exist_ok=True)
     app.config['PHOTOS_PATH'] = photos_path

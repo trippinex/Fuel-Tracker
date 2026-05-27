@@ -5,6 +5,7 @@ from sqlalchemy.orm import selectinload
 
 from ..models import Vehicle, FillUp
 from ..database import db
+from ..services.ownership import get_owned_vehicle
 
 analytics_bp = Blueprint('analytics', __name__)
 
@@ -129,10 +130,7 @@ def analytics():
 
     if vehicle_id_str:
         try:
-            vid = int(vehicle_id_str)
-            candidate = db.session.get(Vehicle, vid)
-            if candidate and candidate.user_id == current_user.id:
-                selected_vehicle = candidate
+            selected_vehicle = get_owned_vehicle(int(vehicle_id_str))
         except (ValueError, TypeError):
             pass
 
@@ -150,8 +148,8 @@ def analytics():
 @analytics_bp.route('/data/<int:vehicle_id>')
 @login_required
 def analytics_data(vehicle_id):
-    vehicle = db.session.get(Vehicle, vehicle_id)
-    if not vehicle or vehicle.user_id != current_user.id:
+    vehicle = get_owned_vehicle(vehicle_id)
+    if not vehicle:
         return jsonify({'error': 'Vehicle not found'}), 404
     stats = _compute_analytics(vehicle)
     stats.pop('vehicle', None)

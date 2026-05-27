@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-from datetime import datetime, date as date_cls
+from datetime import datetime, timezone, date as date_cls
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ def export_backup():
     payload = {
         'app': 'FuelTrack',
         'version': 1,
-        'exported_at': datetime.utcnow().isoformat(),
+        'exported_at': datetime.now(timezone.utc).isoformat(),
         'vehicles': [],
     }
 
@@ -68,7 +68,7 @@ def export_backup():
     # otherwise fall back to the server's UTC datetime.
     ts = request.args.get('ts', '').strip()
     if not re.match(r'^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}$', ts):
-        ts = datetime.utcnow().strftime('%Y-%m-%d_%H-%M')
+        ts = datetime.now(timezone.utc).strftime('%Y-%m-%d_%H-%M')
     filename = f'fueltrack-backup-{ts}.json'
 
     return Response(

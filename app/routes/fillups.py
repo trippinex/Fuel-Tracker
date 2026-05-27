@@ -7,6 +7,8 @@ from sqlalchemy.orm import selectinload
 
 from ..models import Vehicle, FillUp
 from ..database import db
+from ..services.mpg import compute_mpg_data, attach_mpg
+from ..services.ownership import get_owned_vehicle
 from .analytics import cache as analytics_cache
 
 fillups_bp = Blueprint('fillups', __name__)
@@ -45,8 +47,7 @@ def add_fillup():
 
         try:
             vehicle_id = int(vehicle_id_str)
-            vehicle = db.session.get(Vehicle, vehicle_id)
-            if not vehicle or vehicle.user_id != current_user.id:
+            if not get_owned_vehicle(vehicle_id):
                 errors.append('Selected vehicle does not exist.')
                 vehicle_id = None
         except (ValueError, TypeError):
@@ -124,14 +125,8 @@ def history():
                 .options(selectinload(Vehicle.fill_ups))
                 .all())
 
-    # Build previous-odometer map for MPG calculation
-    prev_odo_map = {}
-    for v in vehicles:
-        fps = sorted(v.fill_ups, key=lambda f: (f.date, f.odometer_reading))
-        for i in range(1, len(fps)):
-            miles = fps[i].odometer_reading - fps[i - 1].odometer_reading
-            if miles > 0:
-                prev_odo_map[fps[i].id] = fps[i - 1].odometer_reading
+    # Shared MPG calculation — uses already-loaded fill_ups, no extra queries
+    prev_odo_map, _, _ = compute_mpg_data(vehicles)
 
     _HISTORY_LIMIT = 500
     raw_fillups = (
@@ -147,15 +142,7 @@ def history():
     if truncated:
         raw_fillups = raw_fillups[:_HISTORY_LIMIT]
 
-    fillups_with_mpg = []
-    for fillup, vehicle in raw_fillups:
-        prev_odo = prev_odo_map.get(fillup.id)
-        mpg = None
-        if prev_odo is not None:
-            miles = fillup.odometer_reading - prev_odo
-            if miles > 0 and fillup.gallons_pumped > 0:
-                mpg = miles / fillup.gallons_pumped
-        fillups_with_mpg.append((fillup, vehicle, mpg))
+    fillups_with_mpg = attach_mpg(raw_fillups, prev_odo_map)
 
     return render_template('fillups_history.html',
                            fillups=fillups_with_mpg,

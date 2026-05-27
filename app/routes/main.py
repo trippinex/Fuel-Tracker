@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 
 from ..models import Vehicle, FillUp
 from ..database import db
+from ..services.mpg import compute_mpg_data, fleet_avg_mpg, attach_mpg
 
 main_bp = Blueprint('main', __name__)
 
@@ -30,28 +31,17 @@ def index():
         .all()
     )
 
+    # ── Aggregate stats computed in Python from already-loaded fill_ups ──
+    # Saves three round-trips to the database vs. issuing COUNT/SUM queries.
     total_vehicles = len(vehicles)
-
-    total_fillups = (
-        db.session.query(db.func.count(FillUp.id))
-        .join(Vehicle, FillUp.vehicle_id == Vehicle.id)
-        .filter(Vehicle.user_id == uid)
-        .scalar()
-    ) or 0
-
-    total_spend = (
-        db.session.query(db.func.sum(FillUp.gallons_pumped * FillUp.price_per_gallon))
-        .join(Vehicle, FillUp.vehicle_id == Vehicle.id)
-        .filter(Vehicle.user_id == uid)
-        .scalar()
-    ) or 0.0
-
-    total_gallons = (
-        db.session.query(db.func.sum(FillUp.gallons_pumped))
-        .join(Vehicle, FillUp.vehicle_id == Vehicle.id)
-        .filter(Vehicle.user_id == uid)
-        .scalar()
-    ) or 0.0
+    total_fillups  = 0
+    total_spend    = 0.0
+    total_gallons  = 0.0
+    for v in vehicles:
+        for f in v.fill_ups:
+            total_fillups += 1
+            total_spend   += f.gallons_pumped * f.price_per_gallon
+            total_gallons += f.gallons_pumped
 
     # ── Vehicle with the most recent fill-up (for mobile dashboard) ─────────
     most_recent_vehicle_id = None
@@ -63,39 +53,17 @@ def index():
                 _latest_date = v_latest.date
                 most_recent_vehicle_id = v.id
 
-    # ── Fleet avg MPG + per-fill-up MPG map ──────────────────────────────────
-    # For each vehicle build an ordered fill-up list; compute Δmiles / gallons
-    # for every fill-up after the first (first has no prior odometer reading).
-    prev_odo_map = {}          # fill-up id → previous odometer reading
-    fleet_miles   = 0
-    fleet_gallons = 0.0
-
-    for v in vehicles:
-        fps = sorted(v.fill_ups, key=lambda f: (f.date, f.odometer_reading))
-        for i in range(1, len(fps)):
-            miles = fps[i].odometer_reading - fps[i - 1].odometer_reading
-            if miles > 0:
-                prev_odo_map[fps[i].id] = fps[i - 1].odometer_reading
-                fleet_miles   += miles
-                fleet_gallons += fps[i].gallons_pumped
-
-    fleet_avg_mpg = (fleet_miles / fleet_gallons) if fleet_gallons > 0 else None
+    # ── Fleet avg MPG + per-fill-up MPG map (shared helper) ─────────────────
+    prev_odo_map, fleet_miles, fleet_gallons = compute_mpg_data(vehicles)
+    avg_mpg = fleet_avg_mpg(fleet_miles, fleet_gallons)
 
     # Attach MPG to each recent fill-up
-    recent_with_mpg = []
-    for fillup, vehicle in recent_fillups:
-        prev_odo = prev_odo_map.get(fillup.id)
-        mpg = None
-        if prev_odo is not None:
-            miles = fillup.odometer_reading - prev_odo
-            if miles > 0 and fillup.gallons_pumped > 0:
-                mpg = miles / fillup.gallons_pumped
-        recent_with_mpg.append((fillup, vehicle, mpg))
+    recent_with_mpg = attach_mpg(recent_fillups, prev_odo_map)
 
     # ── Key insight ───────────────────────────────────────────────────────────
     insight = None
-    if fleet_avg_mpg is not None:
-        insight = f"Fleet average {fleet_avg_mpg:.1f} MPG across {total_fillups} fill-up{'s' if total_fillups != 1 else ''}"
+    if avg_mpg is not None:
+        insight = f"Fleet average {avg_mpg:.1f} MPG across {total_fillups} fill-up{'s' if total_fillups != 1 else ''}"
     elif total_fillups > 0:
         last = (
             db.session.query(FillUp)
@@ -120,7 +88,7 @@ def index():
         total_fillups=total_fillups,
         total_spend=total_spend,
         total_gallons=total_gallons,
-        fleet_avg_mpg=fleet_avg_mpg,
+        fleet_avg_mpg=avg_mpg,
         insight=insight,
         first_name=first_name,
     )
