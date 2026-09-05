@@ -121,7 +121,7 @@
             <img id="photo-preview"
                  src="{{ url_for('vehicles.vehicle_photo', filename=vehicle.photo_filename) if vehicle.photo_filename else '' }}"
                  alt="Vehicle photo"
-                 style="width:120px;height:90px;object-fit:cover;border-radius:8px;"
+                 style="width:120px;height:90px;object-fit:contain;border-radius:8px;"
                  class="shrink-0" />
             <div class="min-w-0 flex-1">
               <p id="photo-filename" class="text-sm font-semibold text-slate-700 truncate">

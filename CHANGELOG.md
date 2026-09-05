@@ -9,6 +9,12 @@ All notable changes to FuelTrack are documented here.
 
 ---
 
+## [1.4.5] — 2026-09-05
+
+- Vehicle photo thumbnails (add/edit vehicle, vehicle list, dashboard, analytics) switched from `object-fit: cover` to `object-fit: contain` so the full photo is visible instead of being cropped
+
+---
+
 ## [1.4.4] — 2026-05-25
 
 - Analytics: Date Range filter now defaults empty From / To inputs to today's local date when the user selects Date Range mode

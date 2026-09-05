@@ -95,7 +95,7 @@
           {% if vehicle.photo_filename %}
           <img src="{{ url_for('vehicles.vehicle_photo', filename=vehicle.photo_filename) }}"
                alt="{{ vehicle.name }}"
-               style="width:100px;height:75px;object-fit:cover;border-radius:6px;"
+               style="width:100px;height:75px;object-fit:contain;border-radius:6px;"
                class="shrink-0" />
           {% else %}
           <div style="width:100px;height:75px;border-radius:6px;"
