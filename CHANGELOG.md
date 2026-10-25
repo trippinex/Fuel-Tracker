@@ -9,6 +9,12 @@ All notable changes to FuelTrack are documented here.
 
 ---
 
+## [1.4.6] — 2026-10-25
+
+- Security: upgraded dependencies to resolve findings from the 2026-10-25 vulnerability scan — Authlib 1.3.1 → 1.9.1, Werkzeug 3.0.3 → 3.1.9, Flask 3.0.3 → 3.1.3, requests 2.32.3 → 2.34.2, Flask-WTF 1.2.2 → 1.3.0, Flask-Caching 2.3.0 → 2.5.1; pinned transitive certifi 2026.10.23 and idna 3.20
+
+---
+
 ## [1.4.5] — 2026-09-05
 
 - Vehicle photo thumbnails (add/edit vehicle, vehicle list, dashboard, analytics) switched from `object-fit: cover` to `object-fit: contain` so the full photo is visible instead of being cropped
